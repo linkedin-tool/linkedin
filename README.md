@@ -130,4 +130,4 @@ For spørgsmål eller support, kontakt: support@basicplatform.dk
 
 ## Licens
 
-Dette projekt er privat og ikke til offentlig brug.
+Dette projekt er privat og ikke til offentlig brug.# linkedin-tool
