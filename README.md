@@ -1,4 +1,4 @@
-# Basic Platformen.
+# Basic Platformen
 
 En simpel og kraftfuld platform til at håndtere brugerregistrering, betalinger og abonnementer.
 
