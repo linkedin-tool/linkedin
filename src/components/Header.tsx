@@ -85,7 +85,7 @@ export default function Header() {
                 ) : user ? (
                   <div className="flex items-center">
                     <Link href="/dashboard">
-                      <Button variant="outline" size="sm">
+                      <Button size="sm">
                         Dashboard
                       </Button>
                     </Link>

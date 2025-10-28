@@ -160,8 +160,7 @@ export default function HomePage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
-                  size="lg" 
-                  className="text-lg px-8 py-4 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 shadow-lg rounded-full  transition-all duration-200"
+                  className="px-8 h-11 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 shadow-lg rounded-full  transition-all duration-200"
                   onClick={handleFreeTrialClick}
                   disabled={loading}
                 >
@@ -273,8 +272,7 @@ export default function HomePage() {
                 </div>
                 <div className="mt-auto">
                   <Button 
-                    size="lg" 
-                    className="w-full bg-blue-800 hover:bg-blue-900 text-white rounded-full font-semibold py-6  transition-all duration-200" 
+                    className="w-full px-8 h-11 bg-blue-800 hover:bg-blue-900 text-white rounded-full font-semibold  transition-all duration-200" 
                     onClick={handleFreeTrialClick}
                     disabled={loading || !!user}
                   >
@@ -319,8 +317,7 @@ export default function HomePage() {
                 </div>
                 <div className="mt-auto">
                   <Button 
-                    size="lg" 
-                    className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold py-6 shadow-lg  transition-all duration-200" 
+                    className="w-full px-8 h-11 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold shadow-lg  transition-all duration-200" 
                     onClick={handleProClick}
                     disabled={isProButtonDisabled()}
                   >
@@ -345,13 +342,12 @@ export default function HomePage() {
               Klar til at komme i gang?
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Opret din konto i dag og få adgang til alle funktioner
+              Opret din konto GRATIS i dag og få adgang til alle funktioner
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
-                size="lg" 
                 variant="secondary" 
-                className="text-lg px-8 py-4 bg-white text-blue-800 hover:bg-blue-50 rounded-full font-semibold  transition-all duration-200 shadow-lg"
+                className="px-8 h-11 bg-white text-blue-800 hover:bg-blue-50 rounded-full font-semibold  transition-all duration-200 shadow-lg"
                 onClick={handleFreeTrialClick}
                 disabled={loading}
               >

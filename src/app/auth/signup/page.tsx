@@ -246,7 +246,7 @@ function SignupForm() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
+              className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white font-semibold px-8 h-11 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               disabled={loading}
             >
               {loading ? 'Opretter konto...' : 'Opret konto'}

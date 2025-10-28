@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
           
           <div className="text-center space-y-2">
             <Link href="/auth/forgot-password" className="inline-block">
-              <Button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 shadow-lg">
+              <Button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-8 h-11 rounded-full transition-all duration-200 shadow-lg">
                 Anmod om nyt link
               </Button>
             </Link>
@@ -200,7 +200,7 @@ export default function ResetPasswordPage() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-8 h-11 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               disabled={loading}
             >
               {loading ? 'Opdaterer...' : 'Opdater adgangskode'}

@@ -308,7 +308,7 @@ export default function SettingsPage() {
         {/* Company Tab */}
         {activeTab === 'company' && (
           <div className="space-y-8">
-            <Card className="p-8 bg-white border-0 shadow-md">
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <Building2 className="h-6 w-6 text-blue-600" />
                 <h3 className="text-xl font-semibold text-gray-900">Kontooplysninger</h3>
@@ -375,7 +375,7 @@ export default function SettingsPage() {
               </form>
             </Card>
 
-            <Card className="p-8 bg-white border-0 shadow-md">
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <Building2 className="h-6 w-6 text-blue-600" />
                 <h3 className="text-xl font-semibold text-gray-900">Konto information</h3>
@@ -409,7 +409,7 @@ export default function SettingsPage() {
               </div>
             )}
             
-            <Card className="p-8 bg-white border-0 shadow-md">
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
                 <Crown className="h-6 w-6 text-yellow-500" />
                 <h3 className="text-xl font-semibold text-gray-900">Abonnement</h3>
@@ -466,7 +466,7 @@ export default function SettingsPage() {
 
                 {/* Billing Information */}
                 {userProfile?.subscription_status === 'active' && !userProfile?.cancel_at_period_end && (
-                  <div className="space-y-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <Calendar className="h-4 w-4" />
                       Næste trækning
@@ -513,7 +513,7 @@ export default function SettingsPage() {
 
                 {/* Subscription Details */}
                 {userProfile?.subscription_created_at && (
-                  <div className="space-y-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <CreditCard className="h-4 w-4" />
                       Abonnement oprettet
@@ -535,7 +535,7 @@ export default function SettingsPage() {
                       <Button 
                         onClick={handleStripePortal}
                         disabled={creatingPortalSession}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                        className="flex items-center gap-2 px-8 h-11 bg-blue-600 hover:bg-blue-700"
                       >
                         <ExternalLink className="h-4 w-4" />
                         {creatingPortalSession ? 'Opretter...' : 'Åbn Stripe Portal'}
@@ -546,7 +546,7 @@ export default function SettingsPage() {
 
                 {/* Trial expiration info for free trial users */}
                 {userProfile?.subscription_plan === 'free_trial' && userProfile?.trial_end && (userProfile?.subscription_status === 'trialing' || userProfile?.subscription_status === 'expired') && (
-                  <div className="space-y-4">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <Calendar className="h-4 w-4" />
                       Prøveperiode udløb
@@ -568,7 +568,7 @@ export default function SettingsPage() {
                       <Button 
                         onClick={handleUpgradeToProClick}
                         disabled={creatingPortalSession}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                        className="flex items-center gap-2 px-8 h-11 bg-blue-600 hover:bg-blue-700"
                       >
                         <Crown className="h-4 w-4" />
                         {creatingPortalSession ? 'Opretter...' : 'Opgradér til Pro'}

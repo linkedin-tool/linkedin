@@ -17,23 +17,23 @@ export default function Footer() {
             </p>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Navigation</h4>
-            <ul className="space-y-2 text-gray-400">
+            <h4 className="font-semibold mb-4" style={{fontSize: '15px'}}>Navigation</h4>
+            <ul className="space-y-2 text-gray-400" style={{fontSize: '15px'}}>
               <li><Link href="/#pricing" className="hover:text-white transition-colors">Priser</Link></li>
               <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
               <li><Link href="/om-os" className="hover:text-white transition-colors">Om os</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Konto</h4>
-            <ul className="space-y-2 text-gray-400">
+            <h4 className="font-semibold mb-4" style={{fontSize: '15px'}}>Konto</h4>
+            <ul className="space-y-2 text-gray-400" style={{fontSize: '15px'}}>
               <li><Link href="/auth/login" className="hover:text-white transition-colors">Log ind</Link></li>
               <li><Link href="/auth/signup" className="hover:text-white transition-colors">Opret konto</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2 text-gray-400">
+            <h4 className="font-semibold mb-4" style={{fontSize: '15px'}}>Support</h4>
+            <ul className="space-y-2 text-gray-400" style={{fontSize: '15px'}}>
               <li><Link href="/kontakt" className="hover:text-white transition-colors">Kontakt os</Link></li>
             </ul>
           </div>

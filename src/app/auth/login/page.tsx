@@ -123,8 +123,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed"
-              size="lg"
+              className="w-full px-8 h-11 disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? 'Logger ind...' : 'Log ind'}

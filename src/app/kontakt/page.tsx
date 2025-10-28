@@ -79,7 +79,7 @@ export default function ContactPage() {
                   <Button 
                     onClick={() => setIsSubmitted(false)}
                     variant="outline"
-                    size="lg"
+                    className="px-8 h-11"
                   >
                     Send en ny besked
                   </Button>
@@ -153,8 +153,7 @@ export default function ContactPage() {
                   
                   <Button
                     type="submit"
-                    size="lg"
-                    className="w-full md:w-auto px-12 py-4 text-lg"
+                    className="w-full md:w-auto px-8 h-11"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Sender besked...' : 'Send besked'}
@@ -265,15 +264,14 @@ export default function ContactPage() {
               Har du ikke fundet det, du leder efter?
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Måske kan vores dokumentation eller FAQ hjælpe dig videre. 
+              Måske kan vores FAQ hjælpe dig videre. 
               Eller prøv vores gratis prøveperiode og oplev BasicPlatform selv.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/signup">
                 <Button 
                   variant="outline" 
-                  size="lg" 
-                  className="w-full sm:w-auto bg-white text-blue-800 border-2 border-white hover:bg-blue-50 hover:text-blue-900 px-8 py-4 text-lg font-semibold"
+                  className="w-full sm:w-auto bg-white text-blue-800 border-2 border-white hover:bg-blue-50 hover:text-blue-900 px-8 h-11 font-semibold"
                 >
                   Start gratis prøveperiode
                 </Button>
@@ -281,8 +279,7 @@ export default function ContactPage() {
               <Link href="/#pricing">
                 <Button 
                   variant="ghost" 
-                  size="lg" 
-                  className="w-full sm:w-auto text-white hover:bg-white hover:bg-opacity-20 border-2 border-white border-opacity-30 px-8 py-4 text-lg font-semibold"
+                  className="w-full sm:w-auto text-white hover:bg-white hover:bg-opacity-20 border-2 border-white border-opacity-30 px-8 h-11 font-semibold"
                 >
                   Se priser
                 </Button>

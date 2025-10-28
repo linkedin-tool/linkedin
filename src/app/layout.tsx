@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
 import "./globals.css";
+import CookieBanner from "@/components/CookieBanner";
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -25,6 +26,7 @@ export default function RootLayout({
         className={`${figtree.variable} font-figtree antialiased min-h-screen flex flex-col`}
       >
         {children}
+        <CookieBanner />
       </body>
     </html>
   );
