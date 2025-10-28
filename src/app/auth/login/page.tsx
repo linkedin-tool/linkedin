@@ -42,7 +42,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link href="/" className="flex justify-center">
@@ -62,7 +62,7 @@ export default function LoginPage() {
           </p>
         </div>
         
-        <Card className="p-8">
+        <Card className="p-8 bg-white shadow-lg border border-gray-200">
           <form className="space-y-6" onSubmit={handleSignIn}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 placeholder="din@email.dk"
               />
             </div>
@@ -99,14 +99,20 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 placeholder="••••••••"
               />
             </div>
 
+            <div className="flex items-center justify-between">
+              <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+                Glemt adgangskode?
+              </Link>
+            </div>
+
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? 'Logger ind...' : 'Log ind'}
