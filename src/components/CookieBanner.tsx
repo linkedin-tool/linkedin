@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { X, Settings } from 'lucide-react'
 
 interface CookiePreferences {
@@ -94,7 +93,7 @@ export default function CookieBanner() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Vi bruger cookies</h3>
               <p className="text-sm text-gray-600">
                 BasicPlatform bruger cookies til at forbedre din oplevelse på vores hjemmeside, analysere trafik og personalisere indhold. 
-                Ved at klikke "Acceptér alle" samtykker du til vores brug af cookies.
+                Ved at klikke &quot;Acceptér alle&quot; samtykker du til vores brug af cookies.
               </p>
             </div>
             
