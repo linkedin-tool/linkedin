@@ -42,7 +42,7 @@ export default function Footer() {
         {/* Legal Links */}
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-gray-400 text-center md:text-left">
+            <p className="text-gray-400 text-center md:text-left text-sm">
               &copy; 2025 Basic Platform. Alle rettigheder forbeholdes.
             </p>
             <div className="flex flex-wrap justify-center md:justify-end gap-6 text-sm text-gray-400">

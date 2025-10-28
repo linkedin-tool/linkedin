@@ -8,6 +8,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { 
   CheckCircle, 
+  Check,
   ArrowRight,
   Zap,
   Shield,
@@ -146,7 +147,7 @@ export default function HomePage() {
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div className="text-center">
-              <div className="inline-flex items-center px-6 py-3 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center px-6 py-3 bg-blue-100 text-blue-800 rounded-full text-base font-medium mb-6">
                 🚀 Simpel platform til abonnementer
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
@@ -168,7 +169,7 @@ export default function HomePage() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-4">
+              <p className="text-base text-gray-500 mt-4">
                 Ingen kreditkort påkrævet • 7 dages gratis prøveperiode
               </p>
             </div>
@@ -229,36 +230,43 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Simpel og fair prissætning
+                Vælg den plan der passer til dig
               </h2>
               <p className="text-xl text-gray-600">
-                Start gratis og upgrade når du er klar
+                Prøv gratis i 7 dage - ingen binding eller skjulte omkostninger
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <Card className="p-8 bg-white border border-gray-100 rounded-3xl shadow-lg relative flex flex-col">
+              <Card className="p-8 bg-white border border-gray-100 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Gratis prøveperiode</h3>
-                  <p className="text-gray-600 mb-6">Prøv det af helt gratis</p>
+                  <p className="text-gray-600 mb-6">Prøv det helt gratis i 7 dage</p>
                   <div className="mb-6">
                     <span className="text-4xl font-bold text-gray-900">0 kr</span>
-                    <span className="text-gray-600">/første 7 dage</span>
                   </div>
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Alle Pro funktioner i 7 dage</span>
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Komplet dashboard</span>
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Stripe integration</span>
           </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Ingen forpligtelser</span>
           </li>
                   </ul>
@@ -274,7 +282,7 @@ export default function HomePage() {
                   </Button>
                 </div>
               </Card>
-              <Card className="p-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-3xl shadow-lg relative flex flex-col">
+              <Card className="p-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
                   <p className="text-gray-600 mb-6">Fuld adgang til platformen</p>
@@ -284,19 +292,27 @@ export default function HomePage() {
                   </div>
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Ubegrænset brugere</span>
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Avanceret dashboard</span>
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Prioriteret support</span>
                     </li>
                     <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
                       <span className="text-gray-700">Alle fremtidige features</span>
                     </li>
                   </ul>
@@ -316,7 +332,7 @@ export default function HomePage() {
             <div className="text-center mt-12">
               <p className="text-gray-600">
                 <Shield className="w-5 h-5 inline mr-2" />
-                Prøv gratis i dag • Ingen binding • Stop når som helst
+                Kom i gang på under 2 minutter • Ingen kreditkort påkrævet • Opsig når som helst
               </p>
             </div>
         </div>

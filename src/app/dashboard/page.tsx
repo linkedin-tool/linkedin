@@ -158,7 +158,7 @@ function DashboardContent() {
   }
   
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-16">
       {/* Welcome message for Pro users */}
       {showWelcome && (
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
@@ -361,6 +361,179 @@ function DashboardContent() {
           </Card>
         </div>
       </div>
+
+      {/* Extra Content for Testing Scroll */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-6">Detaljeret Analyse</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-4">Bruger Statistikker</h4>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nye brugere denne måned:</span>
+                <span className="font-medium">247</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Aktive brugere i dag:</span>
+                <span className="font-medium">1,023</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Gennemsnitlig session:</span>
+                <span className="font-medium">12 min</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Bounce rate:</span>
+                <span className="font-medium">23%</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-4">Indtægts Oversigt</h4>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">MRR (Monthly Recurring Revenue):</span>
+                <span className="font-medium">267k kr</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">ARR (Annual Recurring Revenue):</span>
+                <span className="font-medium">3.2M kr</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Churn rate:</span>
+                <span className="font-medium">2.1%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">LTV (Lifetime Value):</span>
+                <span className="font-medium">4,250 kr</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Performance Metrics */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-6">Performance Metrics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="p-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">99.9%</div>
+              <div className="text-sm text-gray-600">Uptime</div>
+            </div>
+          </Card>
+          <Card className="p-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">1.2s</div>
+              <div className="text-sm text-gray-600">Avg Response Time</div>
+            </div>
+          </Card>
+          <Card className="p-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">0.01%</div>
+              <div className="text-sm text-gray-600">Error Rate</div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-6">Seneste Transaktioner</h3>
+        <Card className="p-6">
+          <div className="space-y-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Pro Abonnement Betaling</p>
+                    <p className="text-sm text-gray-600">Bruger {i + 1}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-gray-900">299 kr</p>
+                  <p className="text-sm text-gray-500">I dag 10:{15 + i}0</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* System Status */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-6">System Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-4">Server Health</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">API Server</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Healthy
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Database</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Healthy
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Payment Gateway</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Healthy
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Email Service</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Degraded
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-4">Resource Usage</h4>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">CPU Usage</span>
+                  <span className="text-gray-900">45%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Memory Usage</span>
+                  <span className="text-gray-900">67%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '67%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Storage Usage</span>
+                  <span className="text-gray-900">23%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '23%' }}></div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Footer Spacer */}
+      <div className="h-20"></div>
     </div>
   )
 }

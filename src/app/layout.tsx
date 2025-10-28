@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Figtree } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({
+const figtree = Figtree({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-figtree",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="da">
       <body
-        className={`${geist.variable} font-geist antialiased min-h-screen flex flex-col`}
+        className={`${figtree.variable} font-figtree antialiased min-h-screen flex flex-col`}
       >
         {children}
       </body>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -44,6 +44,7 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -81,6 +82,23 @@ export default function DashboardLayout({
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false)
+      }
+    }
+
+    if (userDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [userDropdownOpen])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -181,8 +199,8 @@ export default function DashboardLayout({
 
       {/* Right Content Column - Remaining Width */}
       <div className="flex-1 bg-gray-50 flex flex-col lg:ml-0 overflow-hidden">
-        {/* Top Header with User Dropdown - Sticky */}
-        <div className="bg-white shadow-sm border-b border-gray-200 h-16 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
+        {/* Top Header with User Dropdown - Fixed */}
+        <div className="bg-white shadow-sm border-b border-gray-200 h-16 px-4 lg:px-8 flex items-center justify-between fixed top-0 right-0 left-0 lg:left-[230px] z-40">
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -192,7 +210,7 @@ export default function DashboardLayout({
           </button>
           
           <div className="flex justify-end flex-1 lg:w-full">
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center space-x-3 text-sm focus:outline-none"

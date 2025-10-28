@@ -275,10 +275,10 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-16">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Indstillinger</h1>
-        <p className="text-gray-600">Administrer dine kontooplysninger og abonnement</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Indstillinger</h1>
+        <p className="text-lg text-gray-600">Administrer dine kontooplysninger og abonnement</p>
       </div>
 
       {/* Tabs */}
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-base flex items-center gap-2`}
               >
                 {Icon && <Icon className="h-4 w-4" />}
                 {tab.label}
@@ -327,7 +327,7 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="name" className="block text-base font-medium text-gray-700 mb-2">
                       Navn
                     </label>
                     <Input
@@ -336,12 +336,11 @@ export default function SettingsPage() {
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Dit navn"
                       required
-                      className="h-11"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-base font-medium text-gray-700 mb-2">
                       Email adresse
                     </label>
                     <Input
@@ -351,12 +350,11 @@ export default function SettingsPage() {
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       placeholder="din@email.dk"
                       required
-                      className="h-11"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="phone" className="block text-base font-medium text-gray-700 mb-2">
                       Telefonnummer
                     </label>
                     <Input
@@ -365,7 +363,6 @@ export default function SettingsPage() {
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                       placeholder="+45 12 34 56 78"
-                      className="h-11"
                     />
                   </div>
                 </div>
@@ -385,14 +382,14 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-700">Konto oprettet</span>
-                  <span className="text-sm text-gray-900">
+                  <span className="text-base font-medium text-gray-700">Konto oprettet</span>
+                  <span className="text-base text-gray-900">
                     {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('da-DK') : ''}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-700">Bruger ID</span>
-                  <span className="text-xs text-gray-500 font-mono">{userProfile?.id}</span>
+                  <span className="text-base font-medium text-gray-700">Bruger ID</span>
+                  <span className="text-sm text-gray-500 font-mono">{userProfile?.id}</span>
                 </div>
               </div>
             </Card>
@@ -422,7 +419,7 @@ export default function SettingsPage() {
                 {/* Plan Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-base font-medium text-gray-700 mb-2">
                       Nuværende Plan
                     </label>
                     <div className="flex items-center gap-2">
@@ -445,7 +442,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-base font-medium text-gray-700 mb-2">
                       Status
                     </label>
                     <Badge 
@@ -470,11 +467,11 @@ export default function SettingsPage() {
                 {/* Billing Information */}
                 {userProfile?.subscription_status === 'active' && !userProfile?.cancel_at_period_end && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <Calendar className="h-4 w-4" />
                       Næste trækning
                     </div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-base text-gray-900">
                       {formatDate(userProfile?.next_billing_date)}
                     </div>
                   </div>
@@ -482,15 +479,15 @@ export default function SettingsPage() {
 
                 {userProfile?.cancel_at_period_end && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-yellow-800 mb-2">
+                    <div className="flex items-center gap-2 text-base font-medium text-yellow-800 mb-2">
                       <Calendar className="h-4 w-4" />
                       Abonnement opsagt
                     </div>
-                    <p className="text-sm text-yellow-700">
+                    <p className="text-base text-yellow-700">
                       Dit abonnement slutter den {formatDate(userProfile?.current_period_end)}
                     </p>
                     {userProfile?.subscription_canceled_at && (
-                      <p className="text-xs text-yellow-600 mt-2">
+                      <p className="text-sm text-yellow-600 mt-2">
                         Opsagt den {formatDate(userProfile?.subscription_canceled_at)}
                       </p>
                     )}
@@ -499,15 +496,15 @@ export default function SettingsPage() {
 
                 {userProfile?.subscription_status === 'canceled' && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-red-800 mb-2">
+                    <div className="flex items-center gap-2 text-base font-medium text-red-800 mb-2">
                       <Calendar className="h-4 w-4" />
                       Abonnement opsagt
                     </div>
-                    <p className="text-sm text-red-700">
+                    <p className="text-base text-red-700">
                       Dit abonnement er blevet opsagt og er ikke længere aktivt.
                     </p>
                     {userProfile?.subscription_canceled_at && (
-                      <p className="text-xs text-red-600 mt-2">
+                      <p className="text-sm text-red-600 mt-2">
                         Opsagt den {formatDate(userProfile?.subscription_canceled_at)}
                       </p>
                     )}
@@ -517,11 +514,11 @@ export default function SettingsPage() {
                 {/* Subscription Details */}
                 {userProfile?.subscription_created_at && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <CreditCard className="h-4 w-4" />
                       Abonnement oprettet
                     </div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-base text-gray-900">
                       {formatDate(userProfile?.subscription_created_at)}
                     </div>
                   </div>
@@ -532,7 +529,7 @@ export default function SettingsPage() {
                   <div className="pt-6 border-t border-gray-200">
                     <div className="space-y-4">
                       <h4 className="text-lg font-medium text-gray-900">Administrer Abonnement</h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-base text-gray-600">
                         Administrer dine betalingsoplysninger, se fakturaer, eller opsig dit abonnement.
                       </p>
                       <Button 
@@ -550,11 +547,11 @@ export default function SettingsPage() {
                 {/* Trial expiration info for free trial users */}
                 {userProfile?.subscription_plan === 'free_trial' && userProfile?.trial_end && (userProfile?.subscription_status === 'trialing' || userProfile?.subscription_status === 'expired') && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <div className="flex items-center gap-2 text-base font-medium text-gray-700">
                       <Calendar className="h-4 w-4" />
                       Prøveperiode udløb
                     </div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-base text-gray-900">
                       {getTrialTimeRemaining(userProfile?.trial_end, userProfile?.subscription_status)}
                     </div>
                   </div>
@@ -565,7 +562,7 @@ export default function SettingsPage() {
                   <div className="pt-6 border-t border-gray-200">
                     <div className="space-y-4">
                       <h4 className="text-lg font-medium text-gray-900">Opgradér til Pro</h4>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-base text-gray-600">
                         Få fuld adgang til platformen og prioriteret support.
                       </p>
                       <Button 

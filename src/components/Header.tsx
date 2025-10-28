@@ -40,11 +40,10 @@ export default function Header() {
   return (
     <>
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-[60]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20 pl-4 sm:pl-6 lg:pl-8 pr-0" style={{maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto'}}>
             <div className="flex items-center">
               <Link href="/" onClick={closeMobileMenu}>
-                <span className="text-xl text-gray-900">
+                <span className="text-xl lg:text-2xl text-gray-900">
                   <span style={{fontWeight: 800}}>Basic</span>
                   <span style={{fontWeight: 300}}>Platform</span>
                 </span>
@@ -55,15 +54,15 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-8">
               <Link 
                 href="/om-os"
-                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                className="text-lg font-semibold text-gray-600 hover:text-gray-900 transition-colors duration-200"
               >
                 Om os
               </Link>
               <Link 
                 href="/kontakt"
-                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                className="text-lg font-semibold text-gray-600 hover:text-gray-900 transition-colors duration-200"
               >
-                Kontakt os
+                Kontakt
               </Link>
               <button 
                 onClick={() => {
@@ -72,19 +71,19 @@ export default function Header() {
                     section.scrollIntoView({ behavior: 'smooth' });
                   }
                 }}
-                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                className="text-lg font-semibold text-gray-600 hover:text-gray-900 transition-colors duration-200"
               >
                 Priser
               </button>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center pr-4 sm:pr-6 lg:pr-8">
               {/* Desktop Auth */}
-              <div className="hidden md:flex items-center space-x-4">
+              <div className="hidden md:flex items-center">
                 {loading ? (
                   <div className="w-8 h-8 animate-pulse bg-gray-200 rounded"></div>
                 ) : user ? (
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
                     <Link href="/dashboard">
                       <Button variant="outline" size="sm">
                         Dashboard
@@ -120,7 +119,6 @@ export default function Header() {
                 )}
               </button>
             </div>
-          </div>
         </div>
       </nav>
 
@@ -134,7 +132,7 @@ export default function Header() {
             <Link 
               href="/om-os"
               onClick={closeMobileMenu}
-              className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200"
+              className="block text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200"
             >
               Om os
             </Link>
@@ -142,9 +140,9 @@ export default function Header() {
             <Link 
               href="/kontakt"
               onClick={closeMobileMenu}
-              className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200"
+              className="block text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200"
             >
-              Kontakt os
+              Kontakt
             </Link>
 
             <button 
@@ -155,37 +153,11 @@ export default function Header() {
                 }
                 closeMobileMenu()
               }}
-              className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200 text-left w-full"
+              className="block text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200 text-left w-full"
             >
               Priser
             </button>
 
-            {/* Legal Links */}
-            <div className="pt-4 border-t border-gray-200">
-              <Link 
-                href="/handelsbetingelser"
-                onClick={closeMobileMenu}
-                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
-              >
-                Handelsbetingelser
-              </Link>
-              
-              <Link 
-                href="/privatlivspolitik"
-                onClick={closeMobileMenu}
-                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
-              >
-                Privatlivspolitik
-              </Link>
-              
-              <Link 
-                href="/cookiepolitik"
-                onClick={closeMobileMenu}
-                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
-              >
-                Cookiepolitik
-              </Link>
-            </div>
 
             {/* Mobile Auth */}
             <div className="pt-4 space-y-4">
