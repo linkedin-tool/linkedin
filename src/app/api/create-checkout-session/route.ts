@@ -3,7 +3,7 @@ import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, phone } = await request.json()
+    const { email, name } = await request.json()
 
     if (!email || !name) {
       return NextResponse.json(
@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
       customer = await stripe.customers.create({
         email: email,
         name: name,
-        phone: phone,
       })
     }
 
@@ -45,13 +44,11 @@ export async function POST(request: NextRequest) {
       metadata: {
         customer_email: email,
         customer_name: name,
-        customer_phone: phone || '',
       },
       subscription_data: {
         metadata: {
           customer_email: email,
           customer_name: name,
-          customer_phone: phone || '',
         }
       },
       allow_promotion_codes: true,

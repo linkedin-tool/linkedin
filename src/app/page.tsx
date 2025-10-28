@@ -137,16 +137,16 @@ export default function HomePage() {
         <Header />
 
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 md:py-20 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-blue-50 via-white to-blue-100 py-12 md:py-20 overflow-hidden">
           {/* Background decorative elements */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-100 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-100 rounded-full opacity-30 blur-3xl"></div>
+            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200 rounded-full opacity-20 blur-3xl"></div>
           </div>
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div className="text-center">
-              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center px-6 py-3 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
                 🚀 Simpel platform til abonnementer
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
@@ -160,7 +160,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
                   size="lg" 
-                  className="text-lg px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg"
+                  className="text-lg px-8 py-4 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 shadow-lg rounded-full  transition-all duration-200"
                   onClick={handleFreeTrialClick}
                   disabled={loading}
                 >
@@ -187,8 +187,8 @@ export default function HomePage() {
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
-              <Card className="p-8 text-center bg-white border border-gray-200">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Card className="p-8 text-center bg-white border border-gray-100 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-200 ">
+                <div className="w-16 h-16 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
                   <Zap className="w-8 h-8 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
@@ -198,9 +198,9 @@ export default function HomePage() {
                   Kom i gang på få minutter med brugerregistrering, login og dashboard funktionalitet.
                 </p>
               </Card>
-              <Card className="p-8 text-center bg-white border border-gray-200">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Shield className="w-8 h-8 text-green-600" />
+              <Card className="p-8 text-center bg-white border border-gray-100 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-200 ">
+                <div className="w-16 h-16 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <Shield className="w-8 h-8 text-emerald-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   Sikre betalinger
@@ -209,9 +209,9 @@ export default function HomePage() {
                   Integreret med Stripe for sikre betalinger og automatisk abonnementshåndtering.
                 </p>
               </Card>
-              <Card className="p-8 text-center bg-white border border-gray-200">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Crown className="w-8 h-8 text-purple-600" />
+              <Card className="p-8 text-center bg-white border border-gray-100 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-200 ">
+                <div className="w-16 h-16 bg-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <Crown className="w-8 h-8 text-amber-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   Komplet dashboard
@@ -236,7 +236,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <Card className="p-8 bg-white border border-gray-200 relative flex flex-col">
+              <Card className="p-8 bg-white border border-gray-100 rounded-3xl shadow-lg relative flex flex-col">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Gratis prøveperiode</h3>
                   <p className="text-gray-600 mb-6">Prøv det af helt gratis</p>
@@ -266,7 +266,7 @@ export default function HomePage() {
                 <div className="mt-auto">
                   <Button 
                     size="lg" 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                    className="w-full bg-blue-800 hover:bg-blue-900 text-white rounded-full font-semibold py-6  transition-all duration-200" 
                     onClick={handleFreeTrialClick}
                     disabled={loading || !!user}
                   >
@@ -274,7 +274,7 @@ export default function HomePage() {
                   </Button>
                 </div>
               </Card>
-              <Card className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 relative flex flex-col">
+              <Card className="p-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-3xl shadow-lg relative flex flex-col">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
                   <p className="text-gray-600 mb-6">Fuld adgang til platformen</p>
@@ -304,7 +304,7 @@ export default function HomePage() {
                 <div className="mt-auto">
                   <Button 
                     size="lg" 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                    className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold py-6 shadow-lg  transition-all duration-200" 
                     onClick={handleProClick}
                     disabled={isProButtonDisabled()}
                   >
@@ -323,7 +323,7 @@ export default function HomePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600">
+        <section className="py-20 bg-gradient-to-r from-blue-800 to-blue-900">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Klar til at komme i gang?
@@ -335,7 +335,7 @@ export default function HomePage() {
               <Button 
                 size="lg" 
                 variant="secondary" 
-                className="text-lg px-8 py-4"
+                className="text-lg px-8 py-4 bg-white text-blue-800 hover:bg-blue-50 rounded-full font-semibold  transition-all duration-200 shadow-lg"
                 onClick={handleFreeTrialClick}
                 disabled={loading}
               >

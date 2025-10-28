@@ -13,7 +13,6 @@ function SignupForm() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -36,7 +35,6 @@ function SignupForm() {
         body: JSON.stringify({
           email,
           name,
-          phone,
         }),
       })
 
@@ -84,7 +82,6 @@ function SignupForm() {
         options: {
           data: {
             name,
-            phone,
           }
         }
       })
@@ -102,7 +99,7 @@ function SignupForm() {
             id: authData.user.id,
             name,
             email,
-            phone,
+            phone: null, // Set to null since we removed the phone field
             subscription_plan: isPro ? 'pro' : 'free_trial',
             subscription_status: isPro ? 'inactive' : 'trialing', // Pro users will get 'active' after Stripe payment
             trial_end: isPro ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now for free trial
@@ -132,7 +129,7 @@ function SignupForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link href="/" className="flex justify-center">
@@ -145,7 +142,7 @@ function SignupForm() {
             {isPro ? 'Opret din Pro konto' : isFreeTrial ? 'Start din gratis prøveperiode' : 'Opret din konto'}
           </h2>
           {isPro && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-3xl">
               <p className="text-center text-sm text-blue-800">
                 <strong>Pro Plan valgt</strong> - Du vil blive ført til betaling efter registrering
               </p>
@@ -155,11 +152,11 @@ function SignupForm() {
             </div>
           )}
           {isFreeTrial && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-center text-sm text-green-800">
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-3xl">
+              <p className="text-center text-sm text-blue-800">
                 <strong>Gratis prøveperiode valgt</strong> - 7 dage gratis adgang
               </p>
-              <p className="text-center text-xs text-green-600 mt-1">
+              <p className="text-center text-xs text-blue-600 mt-1">
                 Alle features • Support • Ingen forpligtelser
               </p>
             </div>
@@ -172,16 +169,16 @@ function SignupForm() {
           </p>
         </div>
         
-        <Card className="p-8">
+        <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
           <form className="space-y-6" onSubmit={handleSignUp}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-3xl">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 ml-4">
                 Navn
               </label>
               <Input
@@ -191,13 +188,13 @@ function SignupForm() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="Dit navn"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 ml-4">
                 Email adresse
               </label>
               <Input
@@ -208,28 +205,13 @@ function SignupForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="din@email.dk"
               />
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Telefonnummer (valgfrit)
-              </label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1"
-                placeholder="+45 12 34 56 78"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 ml-4">
                 Adgangskode
               </label>
               <Input
@@ -240,13 +222,13 @@ function SignupForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="Mindst 6 tegn"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 ml-4">
                 Bekræft adgangskode
               </label>
               <Input
@@ -257,14 +239,14 @@ function SignupForm() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="Gentag adgangskode"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               disabled={loading}
             >
               {loading ? 'Opretter konto...' : 'Opret konto'}
@@ -285,7 +267,7 @@ function SignupForm() {
 export default function SignupPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Indlæser...</p>

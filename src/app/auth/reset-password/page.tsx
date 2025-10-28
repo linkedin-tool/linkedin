@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
   // Show loading while checking session
   if (validSession === null) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Indlæser...</p>
@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
   // Show error if no valid session
   if (!validSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
@@ -98,11 +98,11 @@ export default function ResetPasswordPage() {
           
           <div className="text-center space-y-2">
             <Link href="/auth/forgot-password" className="inline-block">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200">
+              <Button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 shadow-lg">
                 Anmod om nyt link
               </Button>
             </Link>
-            <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+            <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500 font-medium">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Tilbage til login
             </Link>
@@ -115,10 +115,10 @@ export default function ResetPasswordPage() {
   // Show success message
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+            <CheckCircle className="mx-auto h-12 w-12 text-emerald-500" />
             <h2 className="mt-6 text-3xl font-bold text-gray-900">
               Adgangskode opdateret!
             </h2>
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
             </p>
           </div>
           
-          <Card className="p-8 bg-white shadow-lg border border-gray-200">
+          <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-sm text-gray-600">Omdirigerer...</p>
@@ -139,7 +139,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link href="/" className="flex justify-center">
@@ -156,16 +156,16 @@ export default function ResetPasswordPage() {
           </p>
         </div>
         
-        <Card className="p-8 bg-white shadow-lg border border-gray-200">
+        <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
           <form className="space-y-6" onSubmit={handleResetPassword}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-3xl">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 ml-4">
                 Ny adgangskode
               </label>
               <Input
@@ -176,13 +176,13 @@ export default function ResetPasswordPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="Mindst 6 tegn"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 ml-4">
                 Bekræft ny adgangskode
               </label>
               <Input
@@ -193,14 +193,14 @@ export default function ResetPasswordPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="Gentag adgangskode"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               disabled={loading}
             >
               {loading ? 'Opdaterer...' : 'Opdater adgangskode'}
@@ -209,7 +209,7 @@ export default function ResetPasswordPage() {
         </Card>
 
         <div className="text-center">
-          <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+          <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500 font-medium">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Tilbage til login
           </Link>

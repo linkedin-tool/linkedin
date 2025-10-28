@@ -53,7 +53,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link href="/" className="flex justify-center">
@@ -67,22 +67,22 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Eller{' '}
-            <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/auth/signup?plan=free_trial" className="font-medium text-blue-600 hover:text-blue-500">
               opret en ny konto
             </Link>
           </p>
         </div>
         
-        <Card className="p-8 bg-white shadow-lg border border-gray-200">
+        <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
           <form className="space-y-6" onSubmit={handleSignIn}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-3xl">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 ml-4">
                 Email adresse
               </label>
               <Input
@@ -93,13 +93,13 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="din@email.dk"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 ml-4">
                 Adgangskode
               </label>
               <Input
@@ -110,20 +110,21 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="••••••••"
               />
             </div>
 
             <div className="flex items-center justify-between">
-              <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+              <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
                 Glemt adgangskode?
               </Link>
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed"
+              size="lg"
               disabled={loading}
             >
               {loading ? 'Logger ind...' : 'Log ind'}

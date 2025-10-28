@@ -32,10 +32,6 @@ export default function Header() {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-  }
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false)
@@ -57,6 +53,18 @@ export default function Header() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
+              <Link 
+                href="/om-os"
+                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+              >
+                Om os
+              </Link>
+              <Link 
+                href="/kontakt"
+                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+              >
+                Kontakt os
+              </Link>
               <button 
                 onClick={() => {
                   const section = document.getElementById('pricing');
@@ -82,12 +90,6 @@ export default function Header() {
                         Dashboard
                       </Button>
                     </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="text-gray-600 hover:text-gray-900 text-sm"
-                    >
-                      Log ud
-                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4">
@@ -96,9 +98,9 @@ export default function Header() {
                         Log ind
                       </Button>
                     </Link>
-                    <Link href="/auth/signup">
+                    <Link href="/auth/signup?plan=free_trial">
                       <Button size="sm">
-                        Kom i gang
+                        Opret gratis
                       </Button>
                     </Link>
                   </div>
@@ -108,7 +110,7 @@ export default function Header() {
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200 relative z-[70]"
+                className="md:hidden p-2 rounded-md bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-colors duration-200 relative z-[70] focus:outline-none"
                 aria-label="Toggle mobile menu"
               >
                 {isMobileMenuOpen ? (
@@ -128,7 +130,23 @@ export default function Header() {
       }`}>
         <div className="flex flex-col h-full">
           {/* Mobile Navigation Links */}
-          <div className="flex-1 pl-12 pr-4 pt-28 space-y-4">
+          <div className="flex-1 px-12 pt-28 space-y-4">
+            <Link 
+              href="/om-os"
+              onClick={closeMobileMenu}
+              className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200"
+            >
+              Om os
+            </Link>
+
+            <Link 
+              href="/kontakt"
+              onClick={closeMobileMenu}
+              className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200"
+            >
+              Kontakt os
+            </Link>
+
             <button 
               onClick={() => {
                 const section = document.getElementById('pricing');
@@ -142,6 +160,33 @@ export default function Header() {
               Priser
             </button>
 
+            {/* Legal Links */}
+            <div className="pt-4 border-t border-gray-200">
+              <Link 
+                href="/handelsbetingelser"
+                onClick={closeMobileMenu}
+                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
+              >
+                Handelsbetingelser
+              </Link>
+              
+              <Link 
+                href="/privatlivspolitik"
+                onClick={closeMobileMenu}
+                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
+              >
+                Privatlivspolitik
+              </Link>
+              
+              <Link 
+                href="/cookiepolitik"
+                onClick={closeMobileMenu}
+                className="block text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
+              >
+                Cookiepolitik
+              </Link>
+            </div>
+
             {/* Mobile Auth */}
             <div className="pt-4 space-y-4">
               {loading ? (
@@ -153,15 +198,6 @@ export default function Header() {
                       Dashboard
                     </Button>
                   </Link>
-                  <button
-                    onClick={() => {
-                      handleSignOut()
-                      closeMobileMenu()
-                    }}
-                    className="block text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200 text-left w-full"
-                  >
-                    Log ud
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -170,9 +206,9 @@ export default function Header() {
                       Log ind
                     </Button>
                   </Link>
-                  <Link href="/auth/signup" onClick={closeMobileMenu}>
+                  <Link href="/auth/signup?plan=free_trial" onClick={closeMobileMenu}>
                     <Button className="w-full">
-                      Kom i gang
+                      Opret gratis
                     </Button>
                   </Link>
                 </div>

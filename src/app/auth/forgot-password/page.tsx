@@ -61,7 +61,7 @@ function ForgotPasswordContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
@@ -73,7 +73,7 @@ function ForgotPasswordContent() {
             </p>
           </div>
           
-          <Card className="p-8 bg-white shadow-lg border border-gray-200">
+          <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
             <div className="text-center space-y-4">
               <Mail className="mx-auto h-8 w-8 text-blue-500" />
               <div>
@@ -89,7 +89,7 @@ function ForgotPasswordContent() {
           </Card>
 
           <div className="text-center space-y-2">
-            <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+            <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500 font-medium">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Tilbage til login
             </Link>
@@ -111,7 +111,7 @@ function ForgotPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <Link href="/" className="flex justify-center">
@@ -128,16 +128,16 @@ function ForgotPasswordContent() {
           </p>
         </div>
         
-        <Card className="p-8 bg-white shadow-lg border border-gray-200">
+        <Card className="p-8 bg-white shadow-xl border border-blue-100 rounded-3xl">
           <form className="space-y-6" onSubmit={handleResetPassword}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-3xl">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 ml-4">
                 Email adresse
               </label>
               <Input
@@ -148,14 +148,14 @@ function ForgotPasswordContent() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 border-gray-300 focus:border-gray-300 focus:ring-0 focus:outline-none focus:shadow-none focus:ring-offset-0 rounded-3xl shadow-none"
                 placeholder="din@email.dk"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white font-semibold py-6 px-6 rounded-full transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               disabled={loading}
             >
               {loading ? 'Sender...' : 'Send nulstillingslink'}
@@ -164,7 +164,7 @@ function ForgotPasswordContent() {
         </Card>
 
         <div className="text-center">
-          <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+          <Link href="/auth/login" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-500 font-medium">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Tilbage til login
           </Link>
@@ -177,7 +177,7 @@ function ForgotPasswordContent() {
 export default function ForgotPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Indlæser...</p>

@@ -428,7 +428,7 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2">
                       <Badge 
                         variant={userProfile?.subscription_plan === 'pro' && userProfile?.subscription_status !== 'canceled' ? 'default' : 'secondary'}
-                        className={`text-sm ${
+                        className={`${
                           userProfile?.subscription_plan === 'pro' 
                             ? 'bg-blue-100 text-blue-800 border-blue-200' 
                             : userProfile?.subscription_plan === 'free_trial' 
@@ -450,7 +450,7 @@ export default function SettingsPage() {
                     </label>
                     <Badge 
                       variant={getStatusBadgeVariant(userProfile?.subscription_status)}
-                      className={`text-sm ${
+                      className={`${
                         userProfile?.subscription_status === 'active' 
                           ? 'bg-green-100 text-green-800 border-green-200' 
                           : userProfile?.subscription_status === 'trialing' 
