@@ -29,7 +29,18 @@ export default function LoginPage() {
       })
 
       if (error) {
-        setError(error.message)
+        // Oversæt almindelige fejlbeskeder til dansk
+        let errorMessage = error.message
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Ugyldig email eller adgangskode'
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Email ikke bekræftet. Tjek din indbakke.'
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = 'For mange forsøg. Prøv igen senere.'
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'Bruger ikke fundet'
+        }
+        setError(errorMessage)
       } else {
         router.push('/dashboard')
         router.refresh()
