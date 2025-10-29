@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Image, ExternalLink, PlusCircle, Eye, X } from "lucide-react";
+import { FileText, Calendar, Image, PlusCircle, Eye, X } from "lucide-react";
 import Link from "next/link";
 
 interface LinkedInPost {
@@ -35,7 +35,7 @@ export default function MineOpslagPage() {
         }
 
         const { data: postsData, error: postsError } = await supabase
-          .from("linkedin_posts")
+          .from("linkedin_posts" as any)
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
@@ -44,10 +44,10 @@ export default function MineOpslagPage() {
           throw postsError;
         }
 
-        setPosts(postsData || []);
-      } catch (err: any) {
+        setPosts((postsData as any) || []);
+      } catch (err: unknown) {
         console.error("Error fetching posts:", err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -67,13 +67,6 @@ export default function MineOpslagPage() {
     });
   };
 
-  const getFirstLine = (text: string) => {
-    const firstLine = text.split('\n')[0];
-    if (firstLine.length > 60) {
-      return firstLine.substring(0, 60) + "...";
-    }
-    return firstLine;
-  };
 
   const getPostTitle = (text: string) => {
     const firstLine = text.split('\n')[0];

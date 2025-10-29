@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import sharp from "sharp";
 
 const RESTLI = { "X-Restli-Protocol-Version": "2.0.0" };
 
-async function getLinkedInProfile(supabase: any, userId: string) {
+async function getLinkedInProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data, error } = await supabase
     .from("linkedin_profiles" as any)
     .select("*")
@@ -55,7 +54,7 @@ async function uploadBinary(uploadUrl: string, file: File, accessToken: string) 
   if (!res.ok) throw new Error(`binary upload failed: ${res.status} ${await res.text()}`);
 }
 
-async function optimizeAndUploadToSupabase(file: File, supabase: any, userId: string): Promise<string> {
+async function optimizeAndUploadToSupabase(file: File, supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string> {
   try {
     // Optimer billedet med Sharp - max bredde 1200px, kvalitet 85%
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -72,7 +71,7 @@ async function optimizeAndUploadToSupabase(file: File, supabase: any, userId: st
     const fileName = `${userId}/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
     // Upload til Supabase Storage bucket 'linkedin-images'
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('linkedin-images')
       .upload(fileName, optimizedBuffer, {
         contentType: 'image/jpeg',
@@ -149,7 +148,7 @@ export async function POST(req: NextRequest) {
     const visibility = String(form.get("visibility") || "PUBLIC");
     const image = form.get("image") as File | null;
 
-    const profile = await getLinkedInProfile(supabase, user.id);
+    const profile = await getLinkedInProfile(supabase, user.id) as any;
     const accessToken = await ensureAccessToken(profile);
     const personUrn = profile.person_urn as string;
 
@@ -185,7 +184,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ postId: (data as any).id, ugcPostId: (data as any).ugc_post_id });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 400 });
   }
 }

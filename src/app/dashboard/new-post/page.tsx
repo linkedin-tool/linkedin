@@ -33,7 +33,7 @@ export default function NewPostPage() {
         setText("");
         setFile(null);
       }
-    } catch (error) {
+    } catch {
       setStatus("Der skete en netværksfejl. Prøv igen.");
     } finally {
       setIsSubmitting(false);

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 async function exchangeCodeForTokens(code: string) {
@@ -31,7 +30,7 @@ async function fetchUserInfo(accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   if (!res.ok) throw new Error(`userinfo failed: ${res.status} ${await res.text()}`);
-  return res.json() as Promise<{ sub: string } & Record<string, any>>;
+  return res.json() as Promise<{ sub: string } & Record<string, unknown>>;
 }
 
 export async function GET(req: NextRequest) {
@@ -77,7 +76,7 @@ export async function GET(req: NextRequest) {
     console.log("Saving LinkedIn profile to database...");
     // upsert profil
     const { error } = await supabase
-      .from("linkedin_profiles")
+      .from("linkedin_profiles" as any)
       .upsert({
         user_id: user.id,
         person_urn: personUrn,
@@ -93,8 +92,8 @@ export async function GET(req: NextRequest) {
 
     console.log("LinkedIn integration successful, redirecting...");
     return NextResponse.redirect(new URL("/dashboard/integration?connected=linkedin", req.url));
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("LinkedIn callback error:", e);
-    return NextResponse.redirect(new URL(`/dashboard/integration?linkedin_error=${encodeURIComponent(e.message)}`, req.url));
+    return NextResponse.redirect(new URL(`/dashboard/integration?linkedin_error=${encodeURIComponent(e instanceof Error ? e.message : 'Unknown error')}`, req.url));
   }
 }

@@ -35,13 +35,13 @@ export default function IntegrationPage() {
         }
 
         const { data: profile } = await supabase
-          .from("linkedin_profiles")
+          .from("linkedin_profiles" as any)
           .select("*")
           .eq("user_id", user.id)
           .single();
 
         if (profile) {
-          setLinkedInProfile(profile);
+          setLinkedInProfile(profile as any);
         }
       } catch (error) {
         console.error("Error checking LinkedIn connection:", error);
