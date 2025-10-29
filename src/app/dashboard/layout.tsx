@@ -12,7 +12,10 @@ import {
   User as UserIcon,
   ChevronDown,
   Menu,
-  X
+  X,
+  Link as LinkIcon,
+  PlusCircle,
+  FileText
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
@@ -122,6 +125,24 @@ export default function DashboardLayout({
       href: '/dashboard', 
       icon: LayoutDashboard,
       current: pathname === '/dashboard' 
+    },
+    { 
+      name: 'Integration', 
+      href: '/dashboard/integration', 
+      icon: LinkIcon,
+      current: pathname === '/dashboard/integration' 
+    },
+    { 
+      name: 'Nyt Opslag', 
+      href: '/dashboard/new-post', 
+      icon: PlusCircle,
+      current: pathname === '/dashboard/new-post' 
+    },
+    { 
+      name: 'Mine Opslag', 
+      href: '/dashboard/mine-opslag', 
+      icon: FileText,
+      current: pathname === '/dashboard/mine-opslag' 
     },
     { 
       name: 'Indstillinger', 

@@ -1,4 +1,4 @@
-# Design Guidelines - BasicPlatform
+# Design Guidelines - BasicPlatform.
 
 ## 🎨 Design Philosophy
 
