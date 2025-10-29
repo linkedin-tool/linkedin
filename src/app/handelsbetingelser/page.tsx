@@ -70,7 +70,7 @@ export default function TermsPage() {
                 Ved manglende betaling kan vi suspendere adgangen til tjenesten.
               </p>
               <p className="text-gray-700 mb-4">
-                Vi tilbyder en 14-dages gratis prøveperiode for nye kunder. Efter prøveperioden 
+                Vi tilbyder en 7-dages gratis prøveperiode for nye kunder. Efter prøveperioden 
                 påbegyndes automatisk fakturering, medmindre abonnementet opsiges.
               </p>
             </section>

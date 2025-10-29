@@ -106,12 +106,27 @@ font-family: 'Geist', system-ui, -apple-system, sans-serif;
 
 ## 🔘 Knap Design
 
+### **Standard Knappestørrelser**
+```css
+/* STANDARD for alle sideindhold knapper */
+padding: 32px; /* px-8 */
+height: 44px;  /* h-11 */
+border-radius: 9999px; /* Helt runde hjørner */
+font-weight: 600;
+font-size: 16px; /* text-base */
+
+/* Header knapper (mindre) */
+padding: 20px; /* px-5 */
+height: 44px;  /* h-11 */
+```
+
 ### **Primær Knap (CTA)**
 ```css
 background: linear-gradient(135deg, #1e40af, #1d4ed8);
 color: white;
 border-radius: 9999px; /* Helt runde hjørner */
-padding: 20px 28px; /* Matcher input højde perfekt */
+padding: 32px; /* px-8 - STANDARD størrelse */
+height: 44px;  /* h-11 - STANDARD størrelse */
 font-weight: 600;
 box-shadow: 0 4px 14px rgba(30, 64, 175, 0.25);
 transition: all 0.2s ease;
@@ -122,15 +137,34 @@ background: linear-gradient(135deg, #1e3a8a, #1e40af);
 /* Ingen transform/movement */
 ```
 
-### **Sekundær Knap**
+### **Sekundær Knap (Outline)**
 ```css
 background: white;
 color: #1e40af;
 border: 2px solid #1e40af;
 border-radius: 9999px; /* Helt runde hjørner */
-padding: 12px 26px;
+padding: 32px; /* px-8 - STANDARD størrelse */
+height: 44px;  /* h-11 - STANDARD størrelse */
 font-weight: 600;
 ```
+
+### **Ghost Knap (Neutral)**
+```css
+background: transparent;
+color: #4b5563;
+border: 1px solid #d1d5db;
+border-radius: 9999px; /* Helt runde hjørner */
+padding: 32px; /* px-8 - STANDARD størrelse */
+height: 44px;  /* h-11 - STANDARD størrelse */
+font-weight: 600;
+```
+
+### **Knap Konsistens Regler**
+- **Alle sideindhold knapper**: `px-8 h-11` (32px padding, 44px højde)
+- **Header knapper**: `size="sm"` (20px padding, 44px højde)
+- **Tekststørrelse**: Standard `text-base` (16px) - ingen `text-lg`
+- **Border radius**: Altid `rounded-full` (helt runde)
+- **Font weight**: Altid `font-semibold` (600)
 
 ---
 

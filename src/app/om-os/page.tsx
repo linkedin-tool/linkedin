@@ -95,17 +95,17 @@ export default function AboutPage() {
               Klar til at komme i gang?
             </h2>
             <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-              Prøv BasicPlatform gratis i 14 dage og oplev, hvor nemt det kan være 
+              Prøv BasicPlatform gratis i 7 dage og oplev, hvor nemt det kan være 
               at administrere dine abonnementer og betalinger.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/signup">
-                <Button size="lg" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto px-8 h-11">
                   Start gratis prøveperiode
                 </Button>
               </Link>
               <Link href="/kontakt">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto px-8 h-11">
                   Kontakt os
                 </Button>
               </Link>

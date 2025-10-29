@@ -172,9 +172,9 @@ export default function Header() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div>
                   <Link href="/auth/login" onClick={closeMobileMenu}>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full mb-4">
                       Log ind
                     </Button>
                   </Link>
