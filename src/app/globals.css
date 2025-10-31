@@ -25,3 +25,83 @@ body {
   font-size: 18px;
   line-height: 1.6;
 }
+
+/* SweetAlert2 Custom Styling - kun for modaler, ikke toast */
+.swal2-popup:not(.swal2-toast) {
+  border-radius: 1.5rem !important; /* 24px - større border radius */
+  padding: 2rem !important;
+  font-family: var(--font-figtree), system-ui, -apple-system, sans-serif !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #1f2937 !important;
+  margin-bottom: 1rem !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-html-container {
+  font-size: 1rem !important;
+  color: #6b7280 !important;
+  line-height: 1.5 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-confirm {
+  border-radius: 0.75rem !important; /* 12px border radius på knapper */
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  border: none !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-cancel {
+  border-radius: 0.75rem !important; /* 12px border radius på knapper */
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  border: 1px solid #d1d5db !important;
+  background-color: #ffffff !important;
+  color: #6b7280 !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-cancel:hover {
+  background-color: #f9fafb !important;
+  border-color: #9ca3af !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-actions {
+  gap: 0.75rem !important;
+  margin-top: 1.5rem !important;
+}
+
+/* Toast notifications bruger SweetAlert2's originale styling */
+
+/* Icon styling - kun for modaler */
+.swal2-popup:not(.swal2-toast) .swal2-icon {
+  border-width: 3px !important;
+  width: 4rem !important;
+  height: 4rem !important;
+  margin: 1rem auto 1.5rem !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-icon.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-icon.swal2-success {
+  border-color: #10b981 !important;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-icon.swal2-error {
+  border-color: #ef4444 !important;
+}
+
+/* Progress bar for timer */
+.swal2-timer-progress-bar {
+  background: rgba(0, 0, 0, 0.2) !important;
+}

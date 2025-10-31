@@ -7,12 +7,15 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { 
-  Users, 
+  FileText, 
   TrendingUp, 
   Crown, 
   Calendar,
-  CheckCircle,
-  X
+  X,
+  PlusCircle,
+  Clock,
+  Link as LinkIcon,
+  BarChart3
 } from 'lucide-react'
 
 interface UserProfile {
@@ -28,45 +31,63 @@ interface UserProfile {
   stripe_subscription_id?: string | null
 }
 
-// Dummy data for demonstration
-const dummyStats = {
-  totalUsers: 1247,
-  activeSubscriptions: 892,
-  monthlyRevenue: 267340,
-  conversionRate: 71.5
+interface LinkedInPost {
+  id: string
+  text: string
+  status: string
+  scheduled_for: string | null
+  published_at: string | null
+  created_at: string
+  image_url: string | null
+  visibility: string
 }
 
-const dummyRecentActivity = [
-  {
-    id: 1,
-    type: 'user_signup',
-    description: 'Ny bruger registreret',
-    user: 'Anders Hansen',
-    timestamp: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    type: 'subscription_upgrade',
-    description: 'Opgraderet til Pro',
-    user: 'Maria Larsen',
-    timestamp: '2024-01-15T09:15:00Z'
-  },
-  {
-    id: 3,
-    type: 'payment_success',
-    description: 'Betaling gennemført',
-    user: 'Peter Nielsen',
-    timestamp: '2024-01-15T08:45:00Z'
-  }
-]
+interface LinkedInStats {
+  totalPosts: number
+  scheduledPosts: number
+  publishedThisMonth: number
+  linkedinConnected: boolean
+}
+
 
 function DashboardContent() {
   const searchParams = useSearchParams()
   const [showWelcome, setShowWelcome] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [linkedinStats, setLinkedinStats] = useState<LinkedInStats>({
+    totalPosts: 0,
+    scheduledPosts: 0,
+    publishedThisMonth: 0,
+    linkedinConnected: false
+  })
+  const [recentPosts, setRecentPosts] = useState<LinkedInPost[]>([])
+  const [upcomingPosts, setUpcomingPosts] = useState<LinkedInPost[]>([])
   
   const supabase = createClient()
+
+  // Standardiserede styling funktioner
+  const getVisibilityStyle = (visibility: string) => {
+    switch (visibility) {
+      case 'PUBLIC':
+        return 'bg-blue-100 text-blue-800';
+      case 'CONNECTIONS':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getVisibilityText = (visibility: string) => {
+    switch (visibility) {
+      case 'PUBLIC':
+        return 'Offentligt';
+      case 'CONNECTIONS':
+        return 'Kun forbindelser';
+      default:
+        return visibility;
+    }
+  };
   
   useEffect(() => {
     const welcome = searchParams.get('welcome')
@@ -103,6 +124,71 @@ function DashboardContent() {
     }
     
     fetchUserProfile()
+  }, [supabase])
+
+  useEffect(() => {
+    const fetchLinkedInData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Fetch all posts
+        const { data: posts } = await supabase
+          .from('linkedin_posts' as any)
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (posts) {
+          const now = new Date()
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          
+          const postsData = posts as any[]
+          const scheduledPosts = postsData.filter(post => post.status === 'scheduled')
+          const publishedThisMonth = postsData.filter(post => 
+            post.status === 'published' && 
+            post.published_at && 
+            new Date(post.published_at) >= startOfMonth
+          )
+          
+          setLinkedinStats({
+            totalPosts: postsData.length,
+            scheduledPosts: scheduledPosts.length,
+            publishedThisMonth: publishedThisMonth.length,
+            linkedinConnected: postsData.length > 0 // Simple check - if they have posts, they're connected
+          })
+
+          // Recent posts (last 5 published)
+          const recentPublished = postsData
+            .filter(post => post.status === 'published')
+            .slice(0, 5)
+          setRecentPosts(recentPublished)
+
+          // Upcoming posts (next 5 scheduled)
+          const upcoming = postsData
+            .filter(post => post.status === 'scheduled' && post.scheduled_for)
+            .sort((a, b) => new Date(a.scheduled_for!).getTime() - new Date(b.scheduled_for!).getTime())
+            .slice(0, 5)
+          setUpcomingPosts(upcoming)
+        }
+
+        // Check LinkedIn connection
+        const { data: linkedinProfile } = await supabase
+          .from('linkedin_profiles' as any)
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (linkedinProfile) {
+          setLinkedinStats(prev => ({ ...prev, linkedinConnected: true }))
+        }
+
+      } catch (error) {
+        console.error('Error fetching LinkedIn data:', error)
+      }
+    }
+
+    fetchLinkedInData()
   }, [supabase])
 
   const formatDate = (dateString: string) => {
@@ -220,104 +306,142 @@ function DashboardContent() {
       
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Users */}
+        {/* Total Posts */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Samlede brugere</p>
-              <p className="text-3xl font-bold text-gray-900">{dummyStats.totalUsers.toLocaleString('da-DK')}</p>
+              <p className="text-sm font-medium text-gray-600">Samlede opslag</p>
+              <p className="text-3xl font-bold text-gray-900">{linkedinStats.totalPosts}</p>
               <p className="text-sm text-gray-500 mt-1">
-                +12% fra sidste måned
+                Alle opslag oprettet
               </p>
             </div>
             <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600" />
+              <FileText className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </Card>
 
-        {/* Active Subscriptions */}
+        {/* Scheduled Posts */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Aktive abonnementer</p>
-              <p className="text-3xl font-bold text-gray-900">{dummyStats.activeSubscriptions.toLocaleString('da-DK')}</p>
+              <p className="text-sm font-medium text-gray-600">Planlagte opslag</p>
+              <p className="text-3xl font-bold text-gray-900">{linkedinStats.scheduledPosts}</p>
               <p className="text-sm text-gray-500 mt-1">
-                +8% fra sidste måned
+                Afventer udgivelse
+              </p>
+            </div>
+            <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Clock className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Published This Month */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Udgivet denne måned</p>
+              <p className="text-3xl font-bold text-gray-900">{linkedinStats.publishedThisMonth}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Opslag på LinkedIn
               </p>
             </div>
             <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </Card>
 
-        {/* Monthly Revenue */}
+        {/* LinkedIn Connection */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Månedlig omsætning</p>
-              <p className="text-3xl font-bold text-gray-900">{(dummyStats.monthlyRevenue / 1000).toFixed(0)}k kr</p>
+              <p className="text-sm font-medium text-gray-600">LinkedIn status</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {linkedinStats.linkedinConnected ? '✓' : '✗'}
+              </p>
               <p className="text-sm text-gray-500 mt-1">
-                +15% fra sidste måned
+                {linkedinStats.linkedinConnected ? 'Tilsluttet' : 'Ikke tilsluttet'}
               </p>
             </div>
-            <div className="h-12 w-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-emerald-600" />
-            </div>
-          </div>
-        </Card>
-
-        {/* Conversion Rate */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Konverteringsrate</p>
-              <p className="text-3xl font-bold text-gray-900">{dummyStats.conversionRate}%</p>
-              <p className="text-sm text-gray-500 mt-1">
-                +3% fra sidste måned
-              </p>
-            </div>
-            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Crown className="h-6 w-6 text-purple-600" />
+            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+              linkedinStats.linkedinConnected ? 'bg-blue-100' : 'bg-gray-100'
+            }`}>
+              <LinkIcon className={`h-6 w-6 ${
+                linkedinStats.linkedinConnected ? 'text-blue-600' : 'text-gray-400'
+              }`} />
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Posts */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-6 w-6 text-gray-600" />
-            <h3 className="text-xl font-semibold text-gray-900">Seneste aktivitet</h3>
+            <BarChart3 className="h-6 w-6 text-gray-600" />
+            <h3 className="text-xl font-semibold text-gray-900">Seneste opslag</h3>
           </div>
+          <Link href="/dashboard/mine-opslag">
+            <Button variant="outline" size="sm">
+              Se alle
+            </Button>
+          </Link>
         </div>
         
-        <Card className="p-6">
-          <div className="space-y-4">
-            {dummyRecentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    {activity.type === 'user_signup' && <Users className="w-5 h-5 text-blue-600" />}
-                    {activity.type === 'subscription_upgrade' && <Crown className="w-5 h-5 text-blue-600" />}
-                    {activity.type === 'payment_success' && <CheckCircle className="w-5 h-5 text-blue-600" />}
+        <div className="space-y-3">
+          {recentPosts.length > 0 ? (
+            recentPosts.map((post) => (
+              <Card key={post.id} className="p-3 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
+                        {post.image_url ? (
+                          <img 
+                            src={post.image_url} 
+                            alt="Opslag billede"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+                            <FileText className="w-6 h-6 text-blue-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 truncate">
+                          {post.text.length > 60 ? `${post.text.substring(0, 60)}...` : post.text}
+                        </h4>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getVisibilityStyle(post.visibility)}`}>
+                            {getVisibilityText(post.visibility)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{activity.description}</p>
-                    <p className="text-sm text-gray-600">{activity.user}</p>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <p className="text-sm text-gray-500">
+                      {post.published_at
+                        ? formatDate(post.published_at)
+                        : formatDate(post.created_at)
+                      }
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    {formatDate(activity.timestamp)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm text-center">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Ingen opslag endnu</p>
+              <p className="text-sm text-gray-400 mt-1">Opret dit første opslag for at se aktivitet her</p>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Quick Actions */}
@@ -325,210 +449,115 @@ function DashboardContent() {
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Hurtige handlinger</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <Link href="/dashboard/settings" className="block">
+            <Link href="/dashboard/new-post" className="block">
               <div className="text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-6 h-6 text-blue-600" />
+                  <PlusCircle className="w-6 h-6 text-blue-600" />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Administrer konto</h4>
-                <p className="text-sm text-gray-600">Opdater dine kontooplysninger og indstillinger</p>
+                <h4 className="font-semibold text-gray-900 mb-2">Opret nyt opslag</h4>
+                <p className="text-sm text-gray-600">Skriv og udgiv dit næste LinkedIn opslag</p>
               </div>
             </Link>
           </Card>
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <Link href="/dashboard/settings?tab=subscription" className="block">
+            <Link href="/dashboard/content-plan" className="block">
               <div className="text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Crown className="w-6 h-6 text-green-600" />
+                  <Calendar className="w-6 h-6 text-green-600" />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Abonnement</h4>
-                <p className="text-sm text-gray-600">Se og administrer dit abonnement</p>
+                <h4 className="font-semibold text-gray-900 mb-2">Content Plan</h4>
+                <p className="text-sm text-gray-600">Se din indholdskalender og planlagte opslag</p>
               </div>
             </Link>
           </Card>
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <a href="mailto:support@basicplatform.dk" className="block">
+            <Link href="/dashboard/integration" className="block">
               <div className="text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-6 h-6 text-purple-600" />
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 ${
+                  linkedinStats.linkedinConnected ? 'bg-blue-100' : 'bg-gray-100'
+                }`}>
+                  <LinkIcon className={`w-6 h-6 ${
+                    linkedinStats.linkedinConnected ? 'text-blue-600' : 'text-gray-400'
+                  }`} />
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Få hjælp</h4>
-                <p className="text-sm text-gray-600">Kontakt vores support team</p>
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  {linkedinStats.linkedinConnected ? 'LinkedIn tilsluttet' : 'Tilslut LinkedIn'}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {linkedinStats.linkedinConnected 
+                    ? 'Administrer din LinkedIn integration' 
+                    : 'Forbind din LinkedIn konto for at komme i gang'
+                  }
+                </p>
               </div>
-            </a>
+            </Link>
           </Card>
         </div>
       </div>
 
-      {/* Extra Content for Testing Scroll */}
+      {/* Upcoming Scheduled Posts */}
       <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Detaljeret Analyse</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Bruger Statistikker</h4>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Nye brugere denne måned:</span>
-                <span className="font-medium">247</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Aktive brugere i dag:</span>
-                <span className="font-medium">1,023</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Gennemsnitlig session:</span>
-                <span className="font-medium">12 min</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Bounce rate:</span>
-                <span className="font-medium">23%</span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Indtægts Oversigt</h4>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-600">MRR (Monthly Recurring Revenue):</span>
-                <span className="font-medium">267k kr</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">ARR (Annual Recurring Revenue):</span>
-                <span className="font-medium">3.2M kr</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Churn rate:</span>
-                <span className="font-medium">2.1%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">LTV (Lifetime Value):</span>
-                <span className="font-medium">4,250 kr</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Performance Metrics */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Performance Metrics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">99.9%</div>
-              <div className="text-sm text-gray-600">Uptime</div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">1.2s</div>
-              <div className="text-sm text-gray-600">Avg Response Time</div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">0.01%</div>
-              <div className="text-sm text-gray-600">Error Rate</div>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Recent Transactions */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Seneste Transaktioner</h3>
-        <Card className="p-6">
-          <div className="space-y-4">
-            {Array.from({ length: 8 }, (_, i) => (
-              <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Pro Abonnement Betaling</p>
-                    <p className="text-sm text-gray-600">Bruger {i + 1}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900">299 kr</p>
-                  <p className="text-sm text-gray-500">I dag 10:{15 + i}0</p>
-                </div>
-              </div>
-            ))}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Clock className="h-6 w-6 text-gray-600" />
+            <h3 className="text-xl font-semibold text-gray-900">Kommende planlagte opslag</h3>
           </div>
-        </Card>
-      </div>
-
-      {/* System Status */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">System Status</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Server Health</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">API Server</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Healthy
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Database</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Healthy
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Payment Gateway</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Healthy
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Email Service</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  Degraded
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Resource Usage</h4>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">CPU Usage</span>
-                  <span className="text-gray-900">45%</span>
+          <Link href="/dashboard/content-plan">
+            <Button variant="outline" size="sm">
+              Se kalender
+            </Button>
+          </Link>
+        </div>
+        
+        <div className="space-y-3">
+          {upcomingPosts.length > 0 ? (
+            upcomingPosts.map((post) => (
+              <Card key={post.id} className="p-3 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
+                        {post.image_url ? (
+                          <img 
+                            src={post.image_url} 
+                            alt="Opslag billede"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+                            <Clock className="w-6 h-6 text-orange-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 truncate">
+                          {post.text.length > 60 ? `${post.text.substring(0, 60)}...` : post.text}
+                        </h4>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getVisibilityStyle(post.visibility)}`}>
+                            {getVisibilityText(post.visibility)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <p className="text-sm text-gray-500">
+                      {post.scheduled_for && formatDate(post.scheduled_for)}
+                    </p>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Memory Usage</span>
-                  <span className="text-gray-900">67%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '67%' }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Storage Usage</span>
-                  <span className="text-gray-900">23%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '23%' }}></div>
-                </div>
-              </div>
-            </div>
-          </Card>
+              </Card>
+            ))
+          ) : (
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm text-center">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Ingen planlagte opslag</p>
+              <p className="text-sm text-gray-400 mt-1">Planlæg dit næste opslag for at se det her</p>
+            </Card>
+          )}
         </div>
       </div>
 

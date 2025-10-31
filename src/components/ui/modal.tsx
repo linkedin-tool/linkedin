@@ -1,7 +1,15 @@
 import * as React from "react"
-import { X } from "lucide-react"
+import { X, MoreVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "./button"
+
+interface ModalAction {
+  label: string
+  onClick: () => void
+  icon?: React.ReactNode
+  variant?: 'default' | 'danger'
+  disabled?: boolean
+  separator?: boolean // Tilføjer separator efter denne action
+}
 
 interface ModalProps {
   isOpen: boolean
@@ -9,9 +17,24 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   className?: string
+  actions?: ModalAction[]
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, actions }: ModalProps) {
+  const [showActionsMenu, setShowActionsMenu] = React.useState(false)
+  
+  // Handle escape key and click outside for actions menu
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      setShowActionsMenu(false)
+    }
+
+    if (showActionsMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showActionsMenu])
+
   // Handle escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -36,7 +59,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
 
   return (
     <div 
-      className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div 
@@ -51,14 +74,54 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
           <h3 className="text-xl font-bold text-gray-900">
             {title}
           </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Actions menu */}
+            {actions && actions.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowActionsMenu(!showActionsMenu)}
+                  className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  <MoreVertical className="h-5 w-5 text-gray-600" />
+                </button>
+                
+                {showActionsMenu && (
+                  <div className="absolute right-0 top-10 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
+                    {actions.map((action, index) => (
+                      <React.Fragment key={index}>
+                        <button
+                          onClick={() => {
+                            action.onClick();
+                            setShowActionsMenu(false);
+                          }}
+                          disabled={action.disabled}
+                          className={cn(
+                            "w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors",
+                            action.variant === 'danger' && "text-red-600 hover:bg-red-50",
+                            action.disabled && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          {action.icon}
+                          {action.label}
+                        </button>
+                        {action.separator && (
+                          <hr className="my-1 border-gray-100" />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
         </div>
         
         {/* Modal Content */}

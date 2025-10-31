@@ -15,7 +15,8 @@ import {
   X,
   Link as LinkIcon,
   PlusCircle,
-  FileText
+  FileText,
+  Calendar
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
@@ -137,6 +138,12 @@ export default function DashboardLayout({
       href: '/dashboard/new-post', 
       icon: PlusCircle,
       current: pathname === '/dashboard/new-post' 
+    },
+    { 
+      name: 'Content Plan', 
+      href: '/dashboard/content-plan', 
+      icon: Calendar,
+      current: pathname === '/dashboard/content-plan' 
     },
     { 
       name: 'Mine Opslag', 

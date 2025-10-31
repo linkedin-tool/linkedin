@@ -15,10 +15,8 @@ async function getLinkedInProfile(supabase: Awaited<ReturnType<typeof createClie
 }
 
 async function ensureAccessToken(profile: any) {
-  // Simplificeret: tjek udløb og (evt.) refresh ved <14 dage tilbage
   const ttl = new Date(profile.access_token_expires_at).getTime() - Date.now();
   if (ttl > 14 * 864e5) return profile.access_token;
-  // TODO: implementer rigtigt refresh-flow hvis du har refresh_token
   return profile.access_token; // fallback: brug eksisterende
 }
 
@@ -41,19 +39,26 @@ async function registerImageUpload(accessToken: string, personUrn: string) {
   if (!res.ok) throw new Error(`registerUpload failed: ${res.status} ${await res.text()}`);
   const json = await res.json();
   const uploadUrl = json.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
-  const asset = json.value.asset; // urn:li:digitalmediaAsset:...
+  const asset = json.value.asset;
   return { uploadUrl, asset };
+}
+
+async function uploadBinary(uploadUrl: string, file: File, accessToken: string) {
+  const res = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: Buffer.from(await file.arrayBuffer())
+  });
+  if (!res.ok) throw new Error(`binary upload failed: ${res.status} ${await res.text()}`);
 }
 
 async function uploadImageToLinkedIn(accessToken: string, personUrn: string, image: File) {
   try {
-    console.log("Starting LinkedIn image upload process...");
+    console.log("Starting LinkedIn image upload for edit mode...");
     
-    // Register upload with LinkedIn
     const { uploadUrl, asset } = await registerImageUpload(accessToken, personUrn);
     console.log("LinkedIn upload registered:", { asset });
     
-    // Upload binary data
     await uploadBinary(uploadUrl, image, accessToken);
     console.log("LinkedIn binary upload completed");
     
@@ -72,18 +77,8 @@ async function uploadImageToLinkedIn(accessToken: string, personUrn: string, ima
   }
 }
 
-async function uploadBinary(uploadUrl: string, file: File, accessToken: string) {
-  const res = await fetch(uploadUrl, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: Buffer.from(await file.arrayBuffer())
-  });
-  if (!res.ok) throw new Error(`binary upload failed: ${res.status} ${await res.text()}`);
-}
-
 async function optimizeAndUploadToSupabase(file: File, supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string> {
   try {
-    // Optimer billedet med Sharp - max bredde 1200px, kvalitet 85%
     const buffer = Buffer.from(await file.arrayBuffer());
     const optimizedBuffer = await sharp(buffer)
       .resize(1200, null, { 
@@ -93,11 +88,9 @@ async function optimizeAndUploadToSupabase(file: File, supabase: Awaited<ReturnT
       .jpeg({ quality: 85 })
       .toBuffer();
 
-    // Generer unikt filnavn
     const timestamp = Date.now();
     const fileName = `${userId}/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // Upload til Supabase Storage bucket 'linkedin-images'
     const { error } = await supabase.storage
       .from('linkedin-images')
       .upload(fileName, optimizedBuffer, {
@@ -107,7 +100,6 @@ async function optimizeAndUploadToSupabase(file: File, supabase: Awaited<ReturnT
 
     if (error) throw error;
 
-    // Få den offentlige URL
     const { data: { publicUrl } } = supabase.storage
       .from('linkedin-images')
       .getPublicUrl(fileName);
@@ -119,83 +111,6 @@ async function optimizeAndUploadToSupabase(file: File, supabase: Awaited<ReturnT
   }
 }
 
-async function createUgcPost({ accessToken, personUrn, text, imageAssetUrns, visibility }: {
-  accessToken: string; personUrn: string; text: string; imageAssetUrns?: string[]; visibility: string;
-}) {
-  let mediaBlock;
-  
-  if (imageAssetUrns && imageAssetUrns.length > 0) {
-    if (imageAssetUrns.length === 1) {
-      // Enkelt billede - brug den gamle struktur
-      mediaBlock = {
-        shareMediaCategory: "IMAGE",
-        media: [{
-          status: "READY",
-          description: { text: text.slice(0, 200) },
-          media: imageAssetUrns[0],
-          title: { text: "Image" }
-        }]
-      };
-    } else {
-      // Flere billeder - brug multiImage struktur
-      mediaBlock = {
-        shareMediaCategory: "IMAGE",
-        media: imageAssetUrns.map((urn, index) => ({
-          status: "READY",
-          description: { text: text.slice(0, 200) },
-          media: urn,
-          title: { text: `Image ${index + 1}` }
-        }))
-      };
-    }
-  } else {
-    mediaBlock = { shareMediaCategory: "NONE" };
-  }
-
-  const payload = {
-    author: personUrn,
-    lifecycleState: "PUBLISHED",
-    specificContent: {
-      "com.linkedin.ugc.ShareContent": {
-        shareCommentary: { text },
-        ...mediaBlock
-      }
-    },
-    visibility: { 
-      "com.linkedin.ugc.MemberNetworkVisibility": visibility === "CONNECTIONS" ? "CONNECTIONS" : "PUBLIC" 
-    }
-  };
-
-  console.log("Creating LinkedIn UGC Post with payload:", JSON.stringify(payload, null, 2));
-  
-  const res = await fetch("https://api.linkedin.com/v2/ugcPosts", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...RESTLI
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const responseText = await res.text();
-  console.log("LinkedIn API Response:", {
-    status: res.status,
-    statusText: res.statusText,
-    headers: Object.fromEntries(res.headers.entries()),
-    body: responseText
-  });
-
-  if (!res.ok) {
-    throw new Error(`ugcPosts failed: ${res.status} ${res.statusText} - ${responseText}`);
-  }
-  
-  // ID returneres i respons-headeren:
-  const ugcPostId = res.headers.get("x-restli-id") || null;
-  console.log("Successfully created LinkedIn post with ID:", ugcPostId);
-  return ugcPostId;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -203,43 +118,112 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     const form = await req.formData();
+    const postId = String(form.get("postId") || "");
     const text = String(form.get("text") || "");
     const visibility = String(form.get("visibility") || "PUBLIC");
-    
+    const scheduledForLocal = form.get("scheduledFor") as string | null;
     // Håndter flere billeder
     const images: File[] = [];
+    const keepImageUrls: string[] = [];
+    
     for (const [key, value] of form.entries()) {
       if (key.startsWith("image") && value instanceof File && value.size > 0) {
         images.push(value);
+      } else if (key.startsWith("keepImageUrl") && typeof value === "string") {
+        keepImageUrls.push(value);
       }
     }
     
-    const scheduledForLocal = form.get("scheduledFor") as string | null;
-    const publishType = String(form.get("publishType") || "now"); // "now" or "schedule"
-    
-    // Konverter lokal tid til UTC for database storage
-    let scheduledForUTC: string | null = null;
-    if (scheduledForLocal && publishType === "schedule") {
-      // scheduledForLocal er i format "YYYY-MM-DDTHH:MM:SS" (dansk tid)
-      // Konverter til UTC for konsistent database storage
-      const localDate = new Date(scheduledForLocal);
-      scheduledForUTC = localDate.toISOString();
-      console.log("Scheduled time conversion:", {
-        local: scheduledForLocal,
-        utc: scheduledForUTC,
-        localParsed: localDate.toString()
-      });
+    if (!postId || !text) {
+      return NextResponse.json({ error: "Post ID and text are required" }, { status: 400 });
     }
 
-    const profile = await getLinkedInProfile(supabase, user.id) as any;
-    const accessToken = await ensureAccessToken(profile);
-    const personUrn = profile.person_urn as string;
-    
-        const imageAssetUrns: string[] = [];
-    let ugcPostId: string | null = null;
-    let status = "published";
-    let publishedAt: Date | null = null;
-    
+    // Konverter lokal tid til UTC for database storage
+    let scheduledForUTC: string | null = null;
+    if (scheduledForLocal) {
+      const localDate = new Date(scheduledForLocal);
+      scheduledForUTC = localDate.toISOString();
+    }
+
+    // Hent det eksisterende opslag for at sikre det tilhører brugeren
+    const { data: existingPost, error: fetchError } = await supabase
+      .from("linkedin_posts" as any)
+      .select("*")
+      .eq("id", postId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !existingPost) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    // Kun tillad redigering af planlagte opslag (ikke udgivne)
+    const postData = existingPost as any;
+    if (postData.status === 'published') {
+      return NextResponse.json({ error: "Cannot edit published posts" }, { status: 400 });
+    }
+
+    // Opdater opslaget i databasen
+    const updateData: any = {
+      text,
+      visibility,
+      updated_at: new Date().toISOString()
+    };
+
+    // Opdater scheduled_for hvis det er angivet
+    if (scheduledForUTC) {
+      updateData.scheduled_for = scheduledForUTC;
+    }
+
+    // Håndter billede ændringer - slet billeder der ikke skal beholdes
+    if (keepImageUrls.length === 0) {
+      // Ingen billeder skal beholdes - slet alle
+      const { error: deleteImagesError } = await supabase
+        .from("linkedin_post_images" as any)
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", user.id);
+      
+      if (deleteImagesError) {
+        console.error("Failed to delete all existing images:", deleteImagesError);
+      } else {
+        console.log("All existing images removed from post");
+      }
+    } else {
+      // Først hent alle eksisterende billeder for dette opslag
+      const { data: existingImages, error: fetchError } = await supabase
+        .from("linkedin_post_images" as any)
+        .select("id, image_url")
+        .eq("post_id", postId)
+        .eq("user_id", user.id);
+      
+      if (fetchError) {
+        console.error("Failed to fetch existing images:", fetchError);
+      } else if (existingImages) {
+        // Find billeder der skal slettes (ikke i keepImageUrls)
+        const existingImagesData = existingImages as any[];
+        const imagesToDelete = existingImagesData.filter(img => 
+          !keepImageUrls.includes(img.image_url)
+        );
+        
+        if (imagesToDelete.length > 0) {
+          const idsToDelete = imagesToDelete.map(img => img.id);
+          const { error: deleteImagesError } = await supabase
+            .from("linkedin_post_images" as any)
+            .delete()
+            .in("id", idsToDelete);
+          
+          if (deleteImagesError) {
+            console.error("Failed to delete specific images:", deleteImagesError);
+          } else {
+            console.log(`Kept ${keepImageUrls.length} existing images, deleted ${imagesToDelete.length} images`);
+          }
+        } else {
+          console.log(`All ${existingImages.length} existing images kept`);
+        }
+      }
+    }
+
     // Array til at holde billede upload resultater
     const imageUploadResults: Array<{
       linkedinImageUrn: string | null;
@@ -251,13 +235,18 @@ export async function POST(req: NextRequest) {
       originalName: string;
     }> = [];
 
-    // Upload alle billeder til LinkedIn med det samme (både for planlagte og øjeblikkelige opslag)
+    // Håndter nye billeder upload
     if (images.length > 0) {
-      console.log(`Processing ${images.length} image uploads for`, publishType === "schedule" ? "scheduled" : "immediate", "post");
+      console.log(`Processing ${images.length} new image uploads in edit mode`);
+      
+      // Hent LinkedIn profil for upload
+      const profile = await getLinkedInProfile(supabase, user.id) as any;
+      const accessToken = await ensureAccessToken(profile);
+      const personUrn = profile.person_urn as string;
       
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
-        console.log(`Uploading image ${i + 1}/${images.length}:`, image.name);
+        console.log(`Uploading image ${i + 1}/${images.length} in edit mode:`, image.name);
         
         const result = {
           linkedinImageUrn: null as string | null,
@@ -276,66 +265,45 @@ export async function POST(req: NextRequest) {
           result.uploadError = linkedinUploadResult.error;
           result.linkedinImageUrn = linkedinUploadResult.linkedinImageUrn;
           
-          if (linkedinUploadResult.uploadStatus === 'uploaded' && linkedinUploadResult.linkedinImageUrn) {
-            imageAssetUrns.push(linkedinUploadResult.linkedinImageUrn);
-            console.log(`LinkedIn image upload ${i + 1} successful:`, linkedinUploadResult.linkedinImageUrn);
+          if (linkedinUploadResult.uploadStatus === 'uploaded') {
+            console.log(`LinkedIn image upload ${i + 1} successful in edit mode:`, linkedinUploadResult.linkedinImageUrn);
           } else {
-            console.error(`LinkedIn image upload ${i + 1} failed:`, linkedinUploadResult.error);
+            console.error(`LinkedIn image upload ${i + 1} failed in edit mode:`, linkedinUploadResult.error);
           }
         } catch (error) {
-          console.error(`LinkedIn image upload ${i + 1} error:`, error);
+          console.error(`LinkedIn image upload ${i + 1} error in edit mode:`, error);
           result.uploadStatus = 'failed';
           result.uploadError = error instanceof Error ? error.message : 'Unknown error';
         }
         
-        // Upload optimeret version til Supabase Storage (for miniature/preview)
+        // Upload optimeret version til Supabase Storage
         try {
           result.supabaseImageUrl = await optimizeAndUploadToSupabase(image, supabase, user.id);
-          console.log(`Supabase image upload ${i + 1} successful:`, result.supabaseImageUrl);
+          console.log(`Supabase image upload ${i + 1} successful in edit mode:`, result.supabaseImageUrl);
         } catch (error) {
-          console.error(`Supabase image upload ${i + 1} failed:`, error);
-          // Fortsæt selvom Supabase upload fejler - LinkedIn upload er vigtigere
+          console.error(`Supabase image upload ${i + 1} failed in edit mode:`, error);
         }
         
         imageUploadResults.push(result);
       }
-    }
-
-    // Hvis det er et planlagt opslag, gem kun i database
-    if (publishType === "schedule" && scheduledForUTC) {
-      status = "scheduled";
-      publishedAt = null;
-      console.log("Scheduling post with pre-uploaded images:", { imageAssetUrns });
-    } else {
-      // Publiser med det samme - brug de allerede uploadede billeder
-      ugcPostId = await createUgcPost({ accessToken, personUrn, text, imageAssetUrns, visibility });
       
-      // Sæt published_at til det faktiske tidspunkt hvor opslaget blev udgivet
-      publishedAt = new Date();
-      console.log("Published post immediately with pre-uploaded images:", { ugcPostId, imageAssetUrns });
+      // Billeder gemmes nu kun i separat linkedin_post_images tabel
     }
 
-    // Gem hovedopslaget i Supabase (uden billede felter - de gemmes separat)
-    const { data: postData, error: postError } = await supabase
+    const { data: updatedPost, error: updateError } = await supabase
       .from("linkedin_posts" as any)
-      .insert({
-        user_id: user.id,
-        linkedin_profile_id: profile.id,
-        ugc_post_id: ugcPostId,
-        text,
-        visibility: visibility,
-        status: status,
-        scheduled_for: scheduledForUTC,
-        published_at: publishedAt?.toISOString() ?? null,
-        // Billeder gemmes nu i separat linkedin_post_images tabel
-      })
-      .select("id, ugc_post_id, status, scheduled_for")
+      .update(updateData)
+      .eq("id", postId)
+      .eq("user_id", user.id)
+      .select("id, text, visibility, scheduled_for, status")
       .single();
-    if (postError) throw postError;
 
-    const postId = (postData as any).id;
+    if (updateError) {
+      console.error("Error updating post:", updateError);
+      throw updateError;
+    }
 
-    // Gem alle billeder i den separate tabel
+    // Gem nye billeder i den separate tabel
     if (imageUploadResults.length > 0) {
       const imageInserts = imageUploadResults.map((result, index) => ({
         post_id: postId,
@@ -355,18 +323,19 @@ export async function POST(req: NextRequest) {
         .insert(imageInserts);
       
       if (imagesError) {
-        console.error("Failed to insert images:", imagesError);
-        // Ikke kast fejl - hovedopslaget er allerede gemt
+        console.error("Failed to insert new images:", imagesError);
+        // Ikke kast fejl - hovedopslaget er allerede opdateret
       } else {
-        console.log(`Successfully saved ${imageInserts.length} images to database`);
+        console.log(`Successfully saved ${imageInserts.length} new images to database`);
       }
     }
 
+    const updatedPostData = updatedPost as any;
     return NextResponse.json({ 
-      postId: postId, 
-      ugcPostId: (postData as any).ugc_post_id,
-      status: (postData as any).status,
-      scheduledFor: (postData as any).scheduled_for,
+      success: true,
+      postId: updatedPostData.id,
+      message: "Post updated successfully",
+      post: updatedPostData,
       imageCount: imageUploadResults.length,
       imageUploadResults: imageUploadResults.map(r => ({
         uploadStatus: r.uploadStatus,
@@ -374,7 +343,12 @@ export async function POST(req: NextRequest) {
         supabaseImageUrl: r.supabaseImageUrl
       }))
     });
+
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 400 });
+    console.error("Error updating post:", e);
+    return NextResponse.json({ 
+      error: e instanceof Error ? e.message : 'Unknown error',
+      details: "Failed to update post"
+    }, { status: 400 });
   }
 }
