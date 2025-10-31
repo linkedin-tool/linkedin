@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Lightbox } from "@/components/ui/lightbox";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Image, Send, Edit, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Image, Send, Edit, Trash2, FileEdit, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Swal from 'sweetalert2';
 
 interface LinkedInPost {
   id: string;
+  ugc_post_id: string | null;
   text: string;
   visibility: string;
   status: string;
@@ -42,6 +43,7 @@ export default function ContentPlanPage() {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [newScheduledDate, setNewScheduledDate] = useState("");
   const [newScheduledTime, setNewScheduledTime] = useState("");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<Array<{id: string, url: string, alt?: string}>>([]);
   const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
@@ -182,6 +184,8 @@ export default function ContentPlanPage() {
         return 'bg-green-500';
       case 'scheduled':
         return 'bg-blue-500';
+      case 'draft':
+        return 'bg-gray-600'; // Darker gray for better visibility
       case 'failed':
         return 'bg-red-500';
       default:
@@ -238,11 +242,20 @@ export default function ContentPlanPage() {
         return 'Udgivet';
       case 'scheduled':
         return 'Planlagt';
+      case 'draft':
+        return 'Kladde';
       case 'failed':
         return 'Fejlet';
       default:
         return 'Ukendt';
     }
+  };
+
+  // Konverter URN til LinkedIn URL
+  const convertUrnToLinkedInUrl = (ugcPostId: string): string => {
+    // Konverter fra urn:li:share:7390097987139629056 til https://www.linkedin.com/feed/update/urn:li:activity:7390097987139629056
+    const shareId = ugcPostId.replace('urn:li:share:', '');
+    return `https://www.linkedin.com/feed/update/urn:li:share:${shareId}`;
   };
 
   const handlePublishNow = async (postId: string) => {
@@ -289,8 +302,14 @@ export default function ContentPlanPage() {
         text: 'Dit opslag er nu live på LinkedIn',
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
+        timerProgressBar: false,
         toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
         position: 'top-end'
       });
       
@@ -299,7 +318,7 @@ export default function ContentPlanPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved udgivelse',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
@@ -310,23 +329,34 @@ export default function ContentPlanPage() {
   const handleReschedule = (post: LinkedInPost) => {
     setShowPostModal(false);
     
-    // Pre-fill med eksisterende dato hvis den findes
-    if (post.scheduled_for) {
-      const existingDate = new Date(post.scheduled_for);
-      const dateStr = existingDate.toISOString().split('T')[0];
-      const timeStr = existingDate.toTimeString().slice(0, 5);
-      setNewScheduledDate(dateStr);
-      setNewScheduledTime(timeStr);
-    } else {
+    if (post.status === 'draft') {
+      // For kladder: brug schedule modal (ny planlægning)
       // Default til i morgen kl. 10:00
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(10, 0, 0, 0);
       setNewScheduledDate(tomorrow.toISOString().split('T')[0]);
       setNewScheduledTime("10:00");
+      setShowScheduleModal(true);
+    } else {
+      // For planlagte opslag: brug reschedule modal (ændre eksisterende)
+      // Pre-fill med eksisterende dato hvis den findes
+      if (post.scheduled_for) {
+        const existingDate = new Date(post.scheduled_for);
+        const dateStr = existingDate.toISOString().split('T')[0];
+        const timeStr = existingDate.toTimeString().slice(0, 5);
+        setNewScheduledDate(dateStr);
+        setNewScheduledTime(timeStr);
+      } else {
+        // Default til i morgen kl. 10:00
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(10, 0, 0, 0);
+        setNewScheduledDate(tomorrow.toISOString().split('T')[0]);
+        setNewScheduledTime("10:00");
+      }
+      setShowRescheduleModal(true);
     }
-    
-    setShowRescheduleModal(true);
   };
 
   const handleRescheduleSubmit = async () => {
@@ -340,6 +370,7 @@ export default function ContentPlanPage() {
       return;
     }
 
+    // Valider at tidspunktet er i fremtiden
     const newDateTime = new Date(`${newScheduledDate}T${newScheduledTime}`);
     if (newDateTime <= new Date()) {
       await Swal.fire({
@@ -354,6 +385,9 @@ export default function ContentPlanPage() {
     try {
       setActionLoading(true);
       
+      // Send lokal tid streng (ligesom new-post gør) - backend konverterer til UTC
+      const scheduledDateTime = `${newScheduledDate}T${newScheduledTime}:00`;
+      
       const response = await fetch('/api/linkedin/reschedule', {
         method: 'POST',
         headers: {
@@ -361,7 +395,7 @@ export default function ContentPlanPage() {
         },
         body: JSON.stringify({ 
           postId: selectedPost.id,
-          newScheduledFor: newDateTime.toISOString()
+          newScheduledFor: scheduledDateTime  // Send lokal tid streng, ikke ISO string
         }),
       });
 
@@ -398,10 +432,101 @@ export default function ContentPlanPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved ændring af dato',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleScheduleSubmit = async () => {
+    if (!selectedPost || !newScheduledDate || !newScheduledTime) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Manglende information',
+        text: 'Vælg venligst både dato og tidspunkt',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    // Valider at tidspunktet er i fremtiden
+    const newDateTime = new Date(`${newScheduledDate}T${newScheduledTime}`);
+    if (newDateTime <= new Date()) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Ugyldig dato',
+        text: 'Planlagt tidspunkt skal være i fremtiden',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      
+      // Brug update-post endpoint med newStatus for at ændre kladde til scheduled
+      const scheduledDateTime = `${newScheduledDate}T${newScheduledTime}:00`;
+      
+      const formData = new FormData();
+      formData.append('postId', selectedPost.id);
+      formData.append('text', selectedPost.text);
+      formData.append('visibility', selectedPost.visibility);
+      formData.append('scheduledFor', scheduledDateTime);
+      formData.append('newStatus', 'scheduled');
+      
+      const response = await fetch('/api/linkedin/update-post', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fejl ved planlægning af opslag');
+      }
+
+      // Opdater opslaget i listen
+      setPosts(prev => prev.map(post => 
+        post.id === selectedPost.id 
+          ? { ...post, status: 'scheduled', scheduled_for: newDateTime.toISOString() }
+          : post
+      ));
+
+      // Stop loading øjeblikkeligt efter UI opdatering
+      setActionLoading(false);
+
+      // Luk modal og reset
+      setShowScheduleModal(false);
+      setNewScheduledDate("");
+      setNewScheduledTime("");
+
+      await Swal.fire({
+        title: 'Opslag planlagt!',
+        text: `Dit opslag er nu planlagt til udgivelse ${newDateTime.toLocaleString('da-DK')}`,
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error scheduling post:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved planlægning',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til false kun ved fejl (success case håndteres tidligere)
       setActionLoading(false);
     }
   };
@@ -413,6 +538,7 @@ export default function ContentPlanPage() {
       postId: post.id,
       text: post.text,
       visibility: post.visibility,
+      status: post.status,
     });
     
     // Tilføj scheduled info hvis det er et planlagt opslag
@@ -481,8 +607,14 @@ export default function ContentPlanPage() {
         icon: 'success',
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
+        timerProgressBar: false,
         toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
         position: 'top-end'
       });
 
@@ -491,10 +623,85 @@ export default function ContentPlanPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved sletning',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConvertToDraft = async (post: LinkedInPost) => {
+    setShowPostModal(false);
+    
+    // Bekræft konvertering med SweetAlert2
+    const result = await Swal.fire({
+      title: 'Gør til kladde?',
+      text: `Er du sikker på, at du vil gøre dette planlagte opslag til en kladde? Opslaget vil ikke længere være planlagt til udgivelse.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6b7280',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ja, gør til kladde',
+      cancelButtonText: 'Annuller'
+    });
+
+    if (!result.isConfirmed) return;
+
+    setActionLoading(true);
+
+    try {
+      const response = await fetch('/api/linkedin/convert-to-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ postId: post.id }),
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Fejl ved konvertering');
+      }
+
+      // Opdater opslaget i listen lokalt (uden at refreshe hele siden)
+      setPosts(prev => prev.map(p => 
+        p.id === post.id 
+          ? { ...p, status: 'draft', scheduled_for: null }
+          : p
+      ));
+
+      // Stop loading øjeblikkeligt efter UI opdatering
+      setActionLoading(false);
+
+      // Vis success besked
+      await Swal.fire({
+        title: 'Gjort til kladde!',
+        text: 'Opslaget er nu gemt som en kladde og er ikke længere planlagt.',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error converting to draft:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved konvertering',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til false kun ved fejl (success case håndteres tidligere)
       setActionLoading(false);
     }
   };
@@ -661,8 +868,34 @@ export default function ContentPlanPage() {
                 label: 'Ændre dato',
                 onClick: () => handleReschedule(selectedPost),
                 icon: <Clock className="w-4 h-4" />,
-                disabled: actionLoading,
-                separator: true
+                disabled: actionLoading
+              }
+            ] : []),
+            // Primary actions for draft posts
+            ...(selectedPost.status === 'draft' ? [
+              {
+                label: 'Udgiv nu',
+                onClick: () => handlePublishNow(selectedPost.id),
+                icon: <Send className="w-4 h-4" />,
+                disabled: actionLoading
+              },
+              {
+                label: 'Planlæg opslag',
+                onClick: () => handleReschedule(selectedPost),
+                icon: <Calendar className="w-4 h-4" />,
+                disabled: actionLoading
+              }
+            ] : []),
+            // View on LinkedIn for published posts
+            ...(selectedPost.status === 'published' && selectedPost.ugc_post_id ? [
+              {
+                label: 'Vis på LinkedIn',
+                onClick: () => {
+                  const linkedinUrl = convertUrnToLinkedInUrl(selectedPost.ugc_post_id!);
+                  window.open(linkedinUrl, '_blank');
+                },
+                icon: <Eye className="w-4 h-4" />,
+                disabled: actionLoading
               }
             ] : []),
             // Secondary actions for all posts
@@ -670,9 +903,17 @@ export default function ContentPlanPage() {
               label: 'Rediger opslag',
               onClick: () => handleEdit(selectedPost),
               icon: <Edit className="w-4 h-4" />,
-              disabled: actionLoading,
-              separator: true
+              disabled: actionLoading
             },
+            // Convert to draft for scheduled posts
+            ...(selectedPost.status === 'scheduled' ? [
+              {
+                label: 'Gør til kladde',
+                onClick: () => handleConvertToDraft(selectedPost),
+                icon: <FileEdit className="w-4 h-4" />,
+                disabled: actionLoading
+              }
+            ] : []),
             {
               label: 'Slet opslag',
               onClick: () => handleDelete(selectedPost),
@@ -826,6 +1067,67 @@ export default function ContentPlanPage() {
                 variant="outline"
                 onClick={() => {
                   setShowRescheduleModal(false);
+                  setNewScheduledDate("");
+                  setNewScheduledTime("");
+                }}
+                disabled={actionLoading}
+                className="px-6"
+              >
+                Annuller
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Schedule Modal (for drafts) */}
+      {selectedPost && (
+        <Modal 
+          isOpen={showScheduleModal} 
+          onClose={() => {
+            setShowScheduleModal(false);
+            setNewScheduledDate("");
+            setNewScheduledTime("");
+          }}
+          title="Planlæg opslag"
+          className="max-w-lg"
+        >
+          <div className="space-y-6">
+            <p className="text-gray-600">
+              Vælg hvornår dit opslag skal udgives på LinkedIn.
+            </p>
+            
+            <DateTimePicker
+              selectedDate={newScheduledDate}
+              selectedTime={newScheduledTime}
+              onDateChange={setNewScheduledDate}
+              onTimeChange={setNewScheduledTime}
+              minDate={new Date().toISOString().split('T')[0]}
+            />
+            
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleScheduleSubmit}
+                disabled={!newScheduledDate || !newScheduledTime || actionLoading}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {actionLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Planlægger...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Planlæg opslag
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowScheduleModal(false);
                   setNewScheduledDate("");
                   setNewScheduledTime("");
                 }}

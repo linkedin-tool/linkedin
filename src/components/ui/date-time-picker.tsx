@@ -28,7 +28,9 @@ export function DateTimePicker({
   }, [selectedDate]);
 
   const today = new Date();
-  const minDateObj = minDate ? new Date(minDate) : today;
+  // Reset today to midnight for date comparison only (no time)
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const minDateObj = minDate ? new Date(minDate) : todayMidnight;
 
   // Generer kalender dage
   const generateCalendarDays = () => {
@@ -56,7 +58,10 @@ export function DateTimePicker({
       const day = date.getDate().toString().padStart(2, '0');
       const dateString = `${year}-${monthStr}-${day}`;
       const isSelected = selectedDate === dateString;
-      const isDisabled = date < minDateObj;
+      
+      // Reset date to midnight for comparison - only disable dates BEFORE today (not today itself)
+      const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const isDisabled = dateMidnight < todayMidnight;
       
       days.push({
         date,
@@ -85,7 +90,12 @@ export function DateTimePicker({
   };
 
   const handleDateSelect = (date: Date) => {
-    if (date < minDateObj) return;
+    // Reset date to midnight for comparison
+    const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // Only block dates BEFORE today (allow today)
+    if (dateMidnight < todayMidnight) return;
     
     // Brug lokal dato uden timezone konvertering
     const year = date.getFullYear();
@@ -94,9 +104,33 @@ export function DateTimePicker({
     const dateString = `${year}-${month}-${day}`;
     onDateChange(dateString);
     
-    // Hvis der ikke er valgt et tidspunkt endnu, sæt default til 12:00
+    // Hvis der ikke er valgt et tidspunkt endnu, sæt default baseret på om det er i dag
     if (!selectedTime) {
-      onTimeChange('12:00');
+      // Hvis det er i dag, sæt default til næste time (eller minimum 1 time frem)
+      if (dateMidnight.getTime() === todayMidnight.getTime()) {
+        const now = new Date();
+        const nextHour = now.getHours() + 1;
+        const defaultHour = nextHour >= 24 ? '00' : nextHour.toString().padStart(2, '0');
+        onTimeChange(`${defaultHour}:00`);
+      } else {
+        // For fremtidige datoer, sæt default til 12:00
+        onTimeChange('12:00');
+      }
+    } else {
+      // Valider at det valgte tidspunkt ikke er i fortiden hvis det er i dag
+      if (dateMidnight.getTime() === todayMidnight.getTime()) {
+        const now = new Date();
+        const [year, month, day] = dateString.split('-').map(Number);
+        const [hour, minute] = selectedTime.split(':');
+        const selectedDateTime = new Date(year, month - 1, day, parseInt(hour), parseInt(minute));
+        
+        if (selectedDateTime < now) {
+          // Hvis det er i dag og tidspunktet er i fortiden, sæt til næste time
+          const nextHour = now.getHours() + 1;
+          const defaultHour = nextHour >= 24 ? '00' : nextHour.toString().padStart(2, '0');
+          onTimeChange(`${defaultHour}:00`);
+        }
+      }
     }
   };
 
@@ -109,6 +143,25 @@ export function DateTimePicker({
 
   const handleTimeChange = (hour: string, minute: string) => {
     const timeString = `${hour}:${minute}`;
+    
+    // Valider at tidspunktet ikke er i fortiden hvis det er i dag
+    if (selectedDate) {
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const selectedDateTime = new Date(year, month - 1, day, parseInt(hour), parseInt(minute));
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const selectedDateMidnight = new Date(year, month - 1, day);
+      
+      // Hvis det er i dag og tidspunktet er i fortiden, sæt til næste time
+      if (selectedDateMidnight.getTime() === todayMidnight.getTime() && selectedDateTime < now) {
+        const nextHour = now.getHours() + 1;
+        const defaultHour = nextHour >= 24 ? '00' : nextHour.toString().padStart(2, '0');
+        // Brug setTimeout for at undgå rekursivt kald under rendering
+        setTimeout(() => onTimeChange(`${defaultHour}:00`), 0);
+        return;
+      }
+    }
+    
     onTimeChange(timeString);
   };
 

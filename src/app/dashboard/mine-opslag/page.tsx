@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Lightbox } from "@/components/ui/lightbox";
-import { FileText, Calendar, PlusCircle, Eye, X, Search, Filter, MoreVertical, Clock, Send, Edit, Trash2 } from "lucide-react";
+import { FileText, Calendar, PlusCircle, Eye, Search, Filter, MoreVertical, Clock, Send, Edit, Trash2, FileEdit } from "lucide-react";
 import Link from "next/link";
 import Swal from 'sweetalert2';
 
@@ -35,7 +35,7 @@ export default function MineOpslagPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<LinkedInPost | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "scheduled">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "scheduled" | "draft" | "failed">("all");
   const [displayCount, setDisplayCount] = useState(20);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -43,6 +43,8 @@ export default function MineOpslagPage() {
   const [reschedulePost, setReschedulePost] = useState<LinkedInPost | null>(null);
   const [newScheduledDate, setNewScheduledDate] = useState("");
   const [newScheduledTime, setNewScheduledTime] = useState("");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedulePost, setSchedulePost] = useState<LinkedInPost | null>(null);
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<Array<{id: string, url: string, alt?: string}>>([]);
   const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
@@ -71,6 +73,13 @@ export default function MineOpslagPage() {
       default:
         return visibility;
     }
+  };
+
+  // Konverter URN til LinkedIn URL
+  const convertUrnToLinkedInUrl = (ugcPostId: string): string => {
+    // Konverter fra urn:li:share:7390097987139629056 til https://www.linkedin.com/feed/update/urn:li:activity:7390097987139629056
+    const shareId = ugcPostId.replace('urn:li:share:', '');
+    return `https://www.linkedin.com/feed/update/urn:li:share:${shareId}`;
   };
 
   // Lightbox funktioner
@@ -251,8 +260,14 @@ export default function MineOpslagPage() {
         text: 'Dit opslag er nu live på LinkedIn',
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
+        timerProgressBar: false,
         toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
         position: 'top-end'
       });
       
@@ -261,7 +276,7 @@ export default function MineOpslagPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved udgivelse',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
@@ -270,26 +285,38 @@ export default function MineOpslagPage() {
   };
 
   const handleReschedule = (post: LinkedInPost) => {
-    setReschedulePost(post);
     setShowActionMenu(null);
     
-    // Pre-fill med eksisterende dato hvis den findes
-    if (post.scheduled_for) {
-      const existingDate = new Date(post.scheduled_for);
-      const dateStr = existingDate.toISOString().split('T')[0];
-      const timeStr = existingDate.toTimeString().slice(0, 5);
-      setNewScheduledDate(dateStr);
-      setNewScheduledTime(timeStr);
-    } else {
+    if (post.status === 'draft') {
+      // For kladder: brug schedule modal (ny planlægning)
+      setSchedulePost(post);
       // Default til i morgen kl. 10:00
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(10, 0, 0, 0);
       setNewScheduledDate(tomorrow.toISOString().split('T')[0]);
       setNewScheduledTime("10:00");
+      setShowScheduleModal(true);
+    } else {
+      // For planlagte opslag: brug reschedule modal (ændre eksisterende)
+      setReschedulePost(post);
+      // Pre-fill med eksisterende dato hvis den findes
+      if (post.scheduled_for) {
+        const existingDate = new Date(post.scheduled_for);
+        const dateStr = existingDate.toISOString().split('T')[0];
+        const timeStr = existingDate.toTimeString().slice(0, 5);
+        setNewScheduledDate(dateStr);
+        setNewScheduledTime(timeStr);
+      } else {
+        // Default til i morgen kl. 10:00
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(10, 0, 0, 0);
+        setNewScheduledDate(tomorrow.toISOString().split('T')[0]);
+        setNewScheduledTime("10:00");
+      }
+      setShowRescheduleModal(true);
     }
-    
-    setShowRescheduleModal(true);
   };
 
   const handleEdit = (post: LinkedInPost) => {
@@ -301,6 +328,7 @@ export default function MineOpslagPage() {
       postId: post.id,
       text: post.text,
       visibility: post.visibility,
+      status: post.status,
     });
     
     // Tilføj scheduled info hvis det er et planlagt opslag
@@ -326,6 +354,81 @@ export default function MineOpslagPage() {
     
     // Naviger til new-post siden med pre-udfyldte data
     window.location.href = `/dashboard/new-post?${params.toString()}`;
+  };
+
+  const handleConvertToDraft = async (post: LinkedInPost) => {
+    setShowActionMenu(null);
+    
+    // Bekræft konvertering med SweetAlert2
+    const result = await Swal.fire({
+      title: 'Gør til kladde?',
+      text: `Er du sikker på, at du vil gøre dette planlagte opslag til en kladde? Opslaget vil ikke længere være planlagt til udgivelse.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6b7280',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ja, gør til kladde',
+      cancelButtonText: 'Annuller'
+    });
+
+    if (!result.isConfirmed) return;
+
+    setActionLoading(post.id);
+
+    try {
+      const response = await fetch('/api/linkedin/convert-to-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ postId: post.id }),
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Fejl ved konvertering');
+      }
+
+      // Opdater opslaget i listen lokalt (uden at refreshe hele siden)
+      setAllPosts(prev => prev.map(p => 
+        p.id === post.id 
+          ? { ...p, status: 'draft', scheduled_for: null }
+          : p
+      ));
+
+      // Stop loading øjeblikkeligt efter UI opdatering
+      setActionLoading(null);
+
+      // Vis success besked
+      await Swal.fire({
+        title: 'Gjort til kladde!',
+        text: 'Opslaget er nu gemt som en kladde og er ikke længere planlagt.',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error converting to draft:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved konvertering',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til null kun ved fejl (success case håndteres tidligere)
+      setActionLoading(null);
+    }
   };
 
   const handleDelete = async (post: LinkedInPost) => {
@@ -368,8 +471,14 @@ export default function MineOpslagPage() {
         icon: 'success',
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
+        timerProgressBar: false,
         toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
         position: 'top-end'
       });
 
@@ -378,7 +487,7 @@ export default function MineOpslagPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved sletning',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
@@ -397,6 +506,7 @@ export default function MineOpslagPage() {
       return;
     }
 
+    // Valider at tidspunktet er i fremtiden
     const newDateTime = new Date(`${newScheduledDate}T${newScheduledTime}`);
     if (newDateTime <= new Date()) {
       await Swal.fire({
@@ -411,6 +521,9 @@ export default function MineOpslagPage() {
     try {
       setActionLoading(reschedulePost.id);
       
+      // Send lokal tid streng (ligesom new-post gør) - backend konverterer til UTC
+      const scheduledDateTime = `${newScheduledDate}T${newScheduledTime}:00`;
+      
       const response = await fetch('/api/linkedin/reschedule', {
         method: 'POST',
         headers: {
@@ -418,7 +531,7 @@ export default function MineOpslagPage() {
         },
         body: JSON.stringify({ 
           postId: reschedulePost.id,
-          newScheduledFor: newDateTime.toISOString()
+          newScheduledFor: scheduledDateTime  // Send lokal tid streng, ikke ISO string
         }),
       });
 
@@ -440,10 +553,102 @@ export default function MineOpslagPage() {
       await Swal.fire({
         icon: 'error',
         title: 'Fejl ved ændring af dato',
-        text: error instanceof Error ? error.message : 'Ukendt fejl',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
         confirmButtonColor: '#dc2626'
       });
     } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleScheduleSubmit = async () => {
+    if (!schedulePost || !newScheduledDate || !newScheduledTime) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Manglende information',
+        text: 'Vælg venligst både dato og tidspunkt',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    // Valider at tidspunktet er i fremtiden
+    const newDateTime = new Date(`${newScheduledDate}T${newScheduledTime}`);
+    if (newDateTime <= new Date()) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Ugyldig dato',
+        text: 'Planlagt tidspunkt skal være i fremtiden',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    try {
+      setActionLoading(schedulePost.id);
+      
+      // Brug update-post endpoint med newStatus for at ændre kladde til scheduled
+      const scheduledDateTime = `${newScheduledDate}T${newScheduledTime}:00`;
+      
+      const formData = new FormData();
+      formData.append('postId', schedulePost.id);
+      formData.append('text', schedulePost.text);
+      formData.append('visibility', schedulePost.visibility);
+      formData.append('scheduledFor', scheduledDateTime);
+      formData.append('newStatus', 'scheduled');
+      
+      const response = await fetch('/api/linkedin/update-post', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fejl ved planlægning af opslag');
+      }
+
+      // Opdater opslaget i listen
+      setAllPosts(prev => prev.map(post => 
+        post.id === schedulePost.id 
+          ? { ...post, status: 'scheduled', scheduled_for: newDateTime.toISOString() }
+          : post
+      ));
+
+      // Stop loading øjeblikkeligt efter UI opdatering
+      setActionLoading(null);
+
+      // Luk modal og reset
+      setShowScheduleModal(false);
+      setSchedulePost(null);
+      setNewScheduledDate("");
+      setNewScheduledTime("");
+
+      await Swal.fire({
+        title: 'Opslag planlagt!',
+        text: `Dit opslag er nu planlagt til udgivelse ${newDateTime.toLocaleString('da-DK')}`,
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error scheduling post:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved planlægning',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til null kun ved fejl (success case håndteres tidligere)
       setActionLoading(null);
     }
   };
@@ -505,29 +710,6 @@ export default function MineOpslagPage() {
           </Card>
         ) : (
           <>
-            {/* Stats Card */}
-            <Card className="p-6 bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Dine LinkedIn Opslag</h3>
-                    <p className="text-gray-700 mt-1">
-                      Du har udgivet {allPosts.length} opslag via platformen
-                    </p>
-                  </div>
-                </div>
-                <Button asChild variant="outline" className="px-6 h-10">
-                  <Link href="/dashboard/new-post">
-                    <PlusCircle className="w-4 h-4" />
-                    Nyt Opslag
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-
             {/* Search and Filter */}
             <Card className="p-4 bg-white border border-gray-200 shadow-sm mb-6">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -549,7 +731,7 @@ export default function MineOpslagPage() {
                   <Filter className="text-gray-400 w-4 h-4" />
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as "all" | "published" | "scheduled")}
+                    onChange={(e) => setStatusFilter(e.target.value as "all" | "published" | "scheduled" | "draft" | "failed")}
                     className="appearance-none px-4 py-2 pr-8 border border-gray-200 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-200 bg-white text-gray-900 text-base font-medium cursor-pointer hover:bg-gray-50 transition-colors h-10"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -561,6 +743,8 @@ export default function MineOpslagPage() {
                     <option value="all">Alle opslag</option>
                     <option value="published">Udgivne</option>
                     <option value="scheduled">Planlagte</option>
+                    <option value="draft">Kladder</option>
+                    <option value="failed">Fejlede</option>
                   </select>
                 </div>
               </div>
@@ -573,7 +757,7 @@ export default function MineOpslagPage() {
                   <span> • Søger efter &quot;{searchQuery}&quot;</span>
                 )}
                 {statusFilter !== "all" && (
-                  <span> • Filtreret efter {statusFilter === "published" ? "udgivne" : "planlagte"}</span>
+                  <span> • Filtreret efter {statusFilter === "published" ? "udgivne" : statusFilter === "scheduled" ? "planlagte" : statusFilter === "draft" ? "kladder" : statusFilter === "failed" ? "fejlede" : statusFilter}</span>
                 )}
               </div>
             </Card>
@@ -590,7 +774,7 @@ export default function MineOpslagPage() {
                     {searchQuery 
                       ? `Ingen opslag matcher søgningen &quot;${searchQuery}&quot;`
                       : statusFilter !== "all"
-                      ? `Ingen ${statusFilter === "published" ? "udgivne" : "planlagte"} opslag fundet`
+                      ? `Ingen ${statusFilter === "published" ? "udgivne" : statusFilter === "scheduled" ? "planlagte" : statusFilter === "draft" ? "kladder" : statusFilter === "failed" ? "fejlede" : statusFilter} opslag fundet`
                       : "Ingen opslag at vise"
                     }
                   </p>
@@ -646,9 +830,11 @@ export default function MineOpslagPage() {
                                 ? 'bg-blue-100 text-blue-800'
                                 : post.status === 'published'
                                 ? 'bg-green-100 text-green-800'
+                                : post.status === 'draft'
+                                ? 'bg-gray-200 text-gray-800'
                                 : 'bg-red-100 text-red-800'
                             }`}>
-                              {post.status === 'scheduled' ? 'Planlagt' : post.status === 'published' ? 'Udgivet' : 'Fejlet'}
+                              {post.status === 'scheduled' ? 'Planlagt' : post.status === 'published' ? 'Udgivet' : post.status === 'draft' ? 'Kladde' : 'Fejlet'}
                             </span>
                             <span className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium ${getVisibilityStyle(post.visibility)}`}>
                               {getVisibilityText(post.visibility)}
@@ -697,24 +883,10 @@ export default function MineOpslagPage() {
                             
                             {/* Dropdown menu - forskellige muligheder baseret på status */}
                             {showActionMenu === post.id && (
-                              <div className="absolute right-0 top-10 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
-                                {/* Rediger opslag - for alle opslag */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEdit(post);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  disabled={actionLoading === post.id}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Rediger opslag
-                                </button>
-                                
+                              <div className="absolute right-0 top-10 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
                                 {/* Ekstra muligheder for planlagte opslag */}
                                 {post.status === 'scheduled' && (
                                   <>
-                                    <hr className="my-1 border-gray-100" />
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -737,7 +909,84 @@ export default function MineOpslagPage() {
                                       <Clock className="w-4 h-4" />
                                       Ændre dato
                                     </button>
+                                    <hr className="my-1 border-gray-100" />
                                   </>
+                                )}
+                                
+                                {/* Ekstra muligheder for kladde opslag */}
+                                {post.status === 'draft' && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePublishNow(post.id);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                      disabled={actionLoading === post.id}
+                                    >
+                                      <Send className="w-4 h-4" />
+                                      Udgiv nu
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleReschedule(post);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                      disabled={actionLoading === post.id}
+                                    >
+                                      <Calendar className="w-4 h-4" />
+                                      Planlæg opslag
+                                    </button>
+                                    <hr className="my-1 border-gray-100" />
+                                  </>
+                                )}
+                                
+                                {/* Vis på LinkedIn - kun for udgivne opslag med ugc_post_id */}
+                                {post.status === 'published' && post.ugc_post_id && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const linkedinUrl = convertUrnToLinkedInUrl(post.ugc_post_id!);
+                                        window.open(linkedinUrl, '_blank');
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                      disabled={actionLoading === post.id}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      Vis på LinkedIn
+                                    </button>
+                                    <hr className="my-1 border-gray-100" />
+                                  </>
+                                )}
+                                
+                                {/* Rediger opslag - for alle opslag */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(post);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                  disabled={actionLoading === post.id}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Rediger opslag
+                                </button>
+                                
+                                {/* Gør til kladde - kun for planlagte opslag */}
+                                {post.status === 'scheduled' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleConvertToDraft(post);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    disabled={actionLoading === post.id}
+                                  >
+                                    <FileEdit className="w-4 h-4" />
+                                    Gør til kladde
+                                  </button>
                                 )}
                                 
                                 {/* Slet opslag - for alle opslag */}
@@ -802,7 +1051,33 @@ export default function MineOpslagPage() {
                 onClick: () => handleReschedule(selectedPost),
                 icon: <Clock className="w-4 h-4" />,
                 disabled: actionLoading === selectedPost.id,
-                separator: true
+              }
+            ] : []),
+            // Primary actions for draft posts
+            ...(selectedPost.status === 'draft' ? [
+              {
+                label: 'Udgiv nu',
+                onClick: () => handlePublishNow(selectedPost.id),
+                icon: <Send className="w-4 h-4" />,
+                disabled: actionLoading === selectedPost.id
+              },
+              {
+                label: 'Planlæg opslag',
+                onClick: () => handleReschedule(selectedPost),
+                icon: <Calendar className="w-4 h-4" />,
+                disabled: actionLoading === selectedPost.id,
+              }
+            ] : []),
+            // View on LinkedIn for published posts
+            ...(selectedPost.status === 'published' && selectedPost.ugc_post_id ? [
+              {
+                label: 'Vis på LinkedIn',
+                onClick: () => {
+                  const linkedinUrl = convertUrnToLinkedInUrl(selectedPost.ugc_post_id!);
+                  window.open(linkedinUrl, '_blank');
+                },
+                icon: <Eye className="w-4 h-4" />,
+                disabled: actionLoading === selectedPost.id,
               }
             ] : []),
             // Secondary actions for all posts
@@ -810,9 +1085,17 @@ export default function MineOpslagPage() {
               label: 'Rediger opslag',
               onClick: () => handleEdit(selectedPost),
               icon: <Edit className="w-4 h-4" />,
-              disabled: actionLoading === selectedPost.id,
-              separator: true
+              disabled: actionLoading === selectedPost.id
             },
+            // Convert to draft for scheduled posts
+            ...(selectedPost.status === 'scheduled' ? [
+              {
+                label: 'Gør til kladde',
+                onClick: () => handleConvertToDraft(selectedPost),
+                icon: <FileEdit className="w-4 h-4" />,
+                disabled: actionLoading === selectedPost.id,
+              }
+            ] : []),
             {
               label: 'Slet opslag',
               onClick: () => handleDelete(selectedPost),
@@ -932,6 +1215,20 @@ export default function MineOpslagPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Status:</span>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedPost.status === 'scheduled'
+                        ? 'bg-blue-100 text-blue-800'
+                        : selectedPost.status === 'published'
+                        ? 'bg-green-100 text-green-800'
+                        : selectedPost.status === 'draft'
+                        ? 'bg-gray-200 text-gray-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedPost.status === 'scheduled' ? 'Planlagt' : selectedPost.status === 'published' ? 'Udgivet' : selectedPost.status === 'draft' ? 'Kladde' : 'Fejlet'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Visning:</span>
                     <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getVisibilityStyle(selectedPost.visibility)}`}>
                       {getVisibilityText(selectedPost.visibility)}
                     </span>
@@ -1008,6 +1305,69 @@ export default function MineOpslagPage() {
                   setNewScheduledTime("");
                 }}
                 disabled={actionLoading === reschedulePost?.id}
+                className="px-6"
+              >
+                Annuller
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Schedule Modal (for drafts) */}
+      {schedulePost && (
+        <Modal 
+          isOpen={showScheduleModal} 
+          onClose={() => {
+            setShowScheduleModal(false);
+            setSchedulePost(null);
+            setNewScheduledDate("");
+            setNewScheduledTime("");
+          }}
+          title="Planlæg opslag"
+          className="max-w-lg"
+        >
+          <div className="space-y-6">
+            <p className="text-gray-600">
+              Vælg hvornår dit opslag skal udgives på LinkedIn.
+            </p>
+            
+            <DateTimePicker
+              selectedDate={newScheduledDate}
+              selectedTime={newScheduledTime}
+              onDateChange={setNewScheduledDate}
+              onTimeChange={setNewScheduledTime}
+              minDate={new Date().toISOString().split('T')[0]}
+            />
+            
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleScheduleSubmit}
+                disabled={!newScheduledDate || !newScheduledTime || actionLoading === schedulePost.id}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {actionLoading === schedulePost.id ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Planlægger...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Planlæg opslag
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowScheduleModal(false);
+                  setSchedulePost(null);
+                  setNewScheduledDate("");
+                  setNewScheduledTime("");
+                }}
+                disabled={actionLoading === schedulePost.id}
                 className="px-6"
               >
                 Annuller

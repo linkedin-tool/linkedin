@@ -99,9 +99,41 @@ body {
 
 .swal2-popup:not(.swal2-toast) .swal2-icon.swal2-error {
   border-color: #ef4444 !important;
+  color: #ef4444 !important;
 }
 
 /* Progress bar for timer */
 .swal2-timer-progress-bar {
   background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Custom clean toast animations */
+.swal2-toast-fade-in {
+  animation: toast-slide-in 0.3s ease-out !important;
+}
+
+.swal2-toast-fade-out {
+  animation: toast-slide-out 0.3s ease-in !important;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }

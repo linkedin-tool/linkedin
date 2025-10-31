@@ -22,9 +22,9 @@ Dette projekt er en Next.js-baseret SaaS platform der giver brugere mulighed for
 - `/dashboard` - **LinkedIn-fokuseret overblik** med KPI'er, seneste opslag og kommende planlagte opslag ✨ *Opdateret*
 - `/dashboard/settings` - Bruger indstillinger
 - `/dashboard/integration` - LinkedIn forbindelse ✨ *Ny*
-- `/dashboard/new-post` - Opret LinkedIn posts ✨ *Ny*
+- `/dashboard/new-post` - Opret LinkedIn posts ✨ *Opdateret med kladde funktionalitet*
 - `/dashboard/content-plan` - Kalender visning af planlagte opslag ✨ *Nyligt tilføjet*
-- `/dashboard/mine-opslag` - Oversigt over alle opslag med søgning og filtrering
+- `/dashboard/mine-opslag` - Oversigt over alle opslag med søgning og filtrering ✨ *Opdateret med kladde og fejlede support*
 
 ## 🏗️ Technical Architecture
 
@@ -39,11 +39,19 @@ Dette projekt er en Next.js-baseret SaaS platform der giver brugere mulighed for
 - **Authentication**: Supabase Auth
 - **File Storage**: Supabase Storage (hvis nødvendigt)
 - **API Routes**: Next.js API routes
+- **Edge Functions**: Supabase Edge Functions til scheduled post publishing
 
 ### **External Integrations**
 - **Stripe**: Betalinger og abonnement
 - **LinkedIn API**: Social media integration
 - **Make.com**: Webhook og automation håndtering
+
+### **Scalability & Performance** ✨ *Nyligt forbedret*
+- **Batch Processing**: Edge function processer LinkedIn posts i batches af 50 for optimal performance
+- **Retry Logic**: Automatisk retry med exponential backoff ved API fejl
+- **Timeout Protection**: 30 sekunders timeout på LinkedIn API calls
+- **Error Categorization**: Intelligent fejlhåndtering der skelner mellem retryable og permanente fejl
+- **Progress Logging**: Detaljeret logging af batch fremgang for monitoring
 
 ## 🗄️ Database Schema
 
@@ -54,8 +62,8 @@ Dette projekt er en Next.js-baseret SaaS platform der giver brugere mulighed for
 
 ### **LinkedIn Integration Tables** ✨ *Nyligt tilføjet*
 - `linkedin_profiles` - LinkedIn OAuth tokens og profil data
-- `linkedin_posts` - Historie over udgivne og planlagte LinkedIn posts med scheduling support
-  - `status` - 'published', 'scheduled', 'failed'
+- `linkedin_posts` - Historie over udgivne, planlagte og kladde LinkedIn posts med scheduling support ✨ *Opdateret*
+  - `status` - 'published', 'scheduled', 'failed', 'draft' ✨ *Ny kladde status*
   - `scheduled_for` - Planlagt udgivelsestidspunkt (NULL for øjeblikkelige posts)
   - `published_at` - Faktisk udgivelsestidspunkt (NULL for planlagte posts)
   - `ugc_post_id` - LinkedIn post ID (NULL for planlagte posts indtil udgivelse)
@@ -131,8 +139,12 @@ src/
 7a. Gem post data i Supabase med `status: "published"`
 
 **Planlagt udgivelse (`publishType: "schedule"`):**
-5b. Billede upload kun til Supabase Storage (optimeret)
+5b. Billede upload til både LinkedIn og Supabase Storage (optimeret workflow)
 6b. Gem post data i Supabase med `status: "scheduled"` og `scheduled_for` timestamp
+
+**Kladde (`publishType: "draft"`):** ✨ *Nyligt tilføjet*
+5c. Billede upload kun til Supabase Storage (ikke LinkedIn)
+6c. Gem post data i Supabase med `status: "draft"` (ingen scheduled_for eller published_at)
 
 ### **3. Content Planning Flow** ✨ *Nyligt tilføjet*
 1. Bruger navigerer til `/dashboard/content-plan`
@@ -155,6 +167,27 @@ src/
    - Udgivelsesdato
 3. **Kommende planlagte opslag** viser næste 5 planlagte posts sorteret efter dato
 4. **Hurtige handlinger** med kontekstuel LinkedIn integration status
+
+### **5. Draft Management Flow** ✨ *Nyligt tilføjet*
+1. **Oprettelse af kladder**:
+   - Fra `/dashboard/new-post` med "Gem som kladde" knap
+   - Billeder uploades kun til Supabase (ikke LinkedIn)
+   - Gemmes med `status: "draft"`
+
+2. **Kladde oversigt**:
+   - Filter for "Kladder" på `/dashboard/mine-opslag`
+   - Grå badge styling for kladde status
+   - Samme action menu som andre opslag
+
+3. **Konvertering af planlagte opslag til kladder**:
+   - "Konverter til kladde" knap for planlagte opslag
+   - Fjerner `scheduled_for` tidspunkt
+   - Ændrer status fra "scheduled" til "draft"
+
+4. **Redigering af kladder**:
+   - Samme edit workflow som andre opslag
+   - Pre-udfylder alle felter inkl. eksisterende billeder
+   - Kan konverteres til planlagt eller øjeblikkelig udgivelse
 
 ## 🛠️ Development Setup
 
@@ -219,7 +252,82 @@ npm run dev  # Starter på port 3000 (eller næste tilgængelige)
   - Automatisk sletning af tilknyttede billeder (CASCADE)
   - Tilgængelig i både Mine Opslag dropdown og Content Plan modal
   - Øjeblikkelig opdatering af UI efter sletning
-- ✅ **🎨 NYEST: Minimalistisk Modal Design**
+- ✅ **📝 NYEST: Fixed Draft Edit Status Bug**
+  - **Problem**: "Gem ændringer" på kladder forsøgte at udgive til LinkedIn i stedet for at gemme som kladde
+  - **Root cause**: Default `publishType` var "now", så `editPostStatus === 'draft' && publishType !== 'draft'` var altid true
+  - **Solution**: Ændret `publishType` til optional parameter og opdateret logik
+  - **Logic**: Kun sæt `newStatus` hvis `publishType` er eksplicit angivet ("now" eller "schedule")
+  - **Draft editing**: "Gem ændringer" uden `publishType` bevarer nu eksisterende status
+  - **Error prevention**: Eliminerer "LinkedIn access token not found" fejl ved simpel kladde redigering
+  - **Preserved functionality**: "Udgiv nu" og "Planlæg opslag" knapper fungerer stadig korrekt
+  - **Image upload**: Billeder uploades stadig til LinkedIn for pre-upload optimering
+- ✅ **📝 FORRIGE: LinkedIn "Vis på LinkedIn" Integration**
+  - **Direct LinkedIn links**: Automatisk konvertering fra URN til LinkedIn URL
+  - **URN format konvertering**: `urn:li:share:X` → `https://www.linkedin.com/feed/update/urn:li:activity:X`
+  - **Dropdown integration**: "Vis på LinkedIn" option i tre-prikker menu for udgivne opslag
+  - **Modal integration**: "Vis på LinkedIn" knap i post detail modals
+  - **Conditional display**: Kun synlig for opslag med `status: 'published'` og `ugc_post_id`
+  - **New tab opening**: Åbner LinkedIn post i ny fane for bedre UX
+  - **Konsistent på tværs af app**: Tilgængelig i både Mine Opslag og Content Plan
+- ✅ **📝 FORRIGE: Perfect Toast Slide Animations**
+  - **Komplet slide workflow**: Både slide-in og slide-out fungerer korrekt
+  - **SweetAlert2 integration**: Bruger `showClass` og `hideClass` for proper timing
+  - **Smooth slide-in**: `.swal2-toast-fade-in` med translateX(100%) → translateX(0)
+  - **Elegant slide-out**: `.swal2-toast-fade-out` med translateX(0) → translateX(100%)
+  - **300ms timing**: Perfekt balance mellem hurtig og smooth (ease-out/ease-in)
+  - **Ingen wiggle**: Fjernet alle default SweetAlert2 shake/wiggle effekter
+  - **Minimal distraction**: Ingen progress bar, kun clean slide transitions
+- ✅ **📝 FORRIGE: Fixed Loading State Timing**
+  - **Øjeblikkelig loading stop**: Loading-ikon stopper så snart UI er opdateret
+  - **Ikke vente på notifikation**: Loading venter ikke på SweetAlert countdown (2-3 sek)
+  - **Bedre UX feedback**: Tre-prikker ikon kommer tilbage øjeblikkeligt efter success
+  - **Konsistent på tværs af operationer**: Både schedule og convert-to-draft har samme timing
+  - **Error handling**: Loading fortsætter kun ved fejl til fejlbesked er vist
+- ✅ **📝 FORRIGE: Improved UX - No Page Refresh on Convert-to-Draft**
+  - **Konsistent UX**: Convert-to-draft opdaterer nu UI lokalt uden page refresh
+  - **Lokal state opdatering**: Bruger `setPosts/setAllPosts` i stedet for `fetchAllPosts()`
+  - **Hurtigere respons**: Øjeblikkelig UI opdatering på både Mine Opslag og Content Plan
+  - **Konsistent med schedule**: Samme UX pattern som når man planlægger kladder
+- ✅ **📝 FORRIGE: Fixed Convert-to-Draft API Error**
+  - **Root cause løst**: update-post API håndterer nu `newStatus` parameter korrekt
+  - **Status opdatering**: Kladder ændres nu til "scheduled" status når de planlægges
+  - **LinkedIn publishing**: Automatisk LinkedIn udgivelse når status ændres til "published"
+  - **API validation**: Kun gyldige statusser accepteres (draft, scheduled, published, failed)
+  - **Error handling**: Proper fejlhåndtering hvis LinkedIn publishing fejler
+  - **Complete workflow**: Draft → Schedule → Status "scheduled" → Convert back to draft works
+- ✅ **📝 FORRIGE: Fixed Draft Scheduling & Modal System**
+  - **Korrekte modaler**: "Planlæg opslag" for kladder vs "Ændre planlagt dato" for planlagte
+  - **Intelligent modal routing**: Automatisk valg af korrekt modal baseret på post status
+  - **Ny schedule modal**: Dedikeret planlægningsmodal for kladder med "Planlæg opslag" knap
+  - **API fejl løst**: Kladder bruger nu update-post endpoint i stedet for reschedule
+  - **Komplet modal system**: Både Mine Opslag og Content Plan har begge modal typer
+  - **Korrekt workflow**: Draft → Schedule modal → API call → Status opdatering
+- ✅ **📝 FORRIGE: Enhanced Draft Workflow**
+  - **Mørkere grå badge** for kladder (`bg-gray-200`) for bedre synlighed
+  - **Korrekte modal labels**: "Status: Kladde" og "Visning: Offentligt/Forbindelser"
+  - **Komplet kladde dropdown**: "Udgiv nu" og "Planlæg opslag" muligheder
+  - **Forbedret edit mode**: Kladder kan udgives eller planlægges direkte fra redigering
+  - **Intelligent API routing**: Bruger `newStatus` parameter til at ændre kladde status
+  - **Synkroniserede funktioner** på tværs af Mine Opslag og Content Plan
+  - **Komplet workflow**: Kladde → Planlagt → Udgivet med alle mellemtrin
+- ✅ **📝 FORRIGE: Draft System Implementation**
+  - **Ny "draft" status** i database schema med constraint og index
+  - **"Gem som kladde"** knap på new-post siden
+  - **"Gør til kladde"** funktionalitet for planlagte opslag (forkortet tekst)
+  - **Kladde filter** på Mine Opslag siden
+  - **Optimeret billede håndtering**: Kladder uploader kun til Supabase
+  - **Ny `/api/linkedin/convert-to-draft` endpoint**
+  - **Grå badge styling** for kladde status
+  - **Komplet CRUD support** for kladder med samme UI som andre opslag
+  - **Synkroniserede dropdown menus** mellem Mine Opslag og Content Plan
+  - **Optimeret rækkefølge**: Udgiv nu → Ændre dato → Rediger opslag → Gør til kladde → Slet opslag
+  - **Bredere dropdown** (180px) for at undgå linjeskift
+  - **Database constraint fix**: Korrekt implementeret 'draft' status i PostgreSQL constraint
+  - **SweetAlert2 styling fix**: Bruger nu SweetAlert2's indbyggede error ikon (ingen custom styling)
+  - **Brugervenlige fejlbeskeder**: Ændret "Unknown error" til "Noget gik galt. Prøv igen." på tværs af hele platformen
+  - **Fejlede opslag filter**: Tilføjet "Fejlede" som filter option på Mine Opslag siden
+  - **Fjernet stats boks**: Fjernet redundant statistik boks (statistik vises på dashboard)
+- ✅ **🎨 FORRIGE: Minimalistisk Modal Design**
   - **Tre-prikker menu** i modal header (MoreVertical ikon)
   - **Permanent grå baggrund** på header knapper (tre-prikker + luk)
   - Alle actions samlet i elegant dropdown menu
@@ -289,9 +397,62 @@ npm run dev  # Starter på port 3000 (eller næste tilgængelige)
   - **🎨 Custom styling**: Større border radius (24px modal, 12px knapper) for moderne look
   - **🎯 Brand-konsistent**: Følger projektets design system med Figtree font og farvepalette
 
+### **🚀 NYEST: Automatisk Udgivelse af Planlagte Opslag**
+- **✅ Supabase Edge Function** til at udgive planlagte opslag
+  - Funktionsnavn: `publish-scheduled-posts`
+  - Finder alle opslag der skal udgives nu (±1 minut buffer)
+  - Behandler posts parallelt for optimal performance
+  - Håndterer op til 200+ opslag på samme tidspunkt
+- **✅ pg_cron Integration**
+  - Kører automatisk **hvert minut** via pg_cron
+  - Asynkron HTTP kald via pg_net til Edge Function
+  - Robust fejlhåndtering og logging
+- **✅ Performance Optimeret**
+  - **Parallelt processing** af alle planlagte opslag
+  - **Batch processing** - kan håndtere store volumener
+  - **5 minut timeout** for at håndtere store batches
+  - **Billeder allerede uploadet** - kun ét API kald per opslag
+- **✅ Database Function**
+  - `publish_scheduled_linkedin_posts()` - kalder Edge Function
+  - Sikker via SECURITY DEFINER og service_role_key
+  - Fejlhåndtering der ikke stopper cron jobbet
+- **✅ Monitoring & Logging**
+  - Alle requests logges med request_id
+  - Fejl logges med detaljerede beskeder
+  - Cron job status kan tjekkes via `cron.job_run_details`
+- **✅ 📊 Queue Status Dashboard**
+  - **Real-time overblik** over cron job kørsler
+  - **Automatisk opdatering** hvert 30. sekund
+  - **Statistikker**: Total kørsler, success rate, fejlede kørsler, gennemsnitlig varighed
+  - **Historisk visning** af seneste 50 kørsler
+  - **Status badges** med farvekodning (grøn=success, rød=fejlet, blå=kører)
+  - **Tilgængelig via** `/dashboard/queue` i navigationen
+  - **Database function** `get_queue_status()` for optimal performance
+- **🔧 NYESTE: Komplet Minut-Vindue System Implementation** *(31. oktober 2025)*
+  - **Problem løst**: Queue-siden viste tomme kørsler selvom opslag blev udgivet korrekt
+  - **Root cause**: Cron jobbet kørte 1 minut frem i tiden og PostgreSQL funktionen nåede ikke at parse HTTP responses
+  - **AI-inspireret løsning**: Implementeret minut-vindue system der binder hver kørsel til et specifikt minut
+  - **Løsning implementeret**:
+    - **Migration 16-19**: Komplet database refaktorering med `minute_bucket` system
+    - **Ny PostgreSQL funktion**: Minut-præcis kørsel med idempotent records og komplet status tracking
+    - **Edge Function v4**: Accepterer minut-vindue parametre og kører præcist på det specifikke minut
+    - **Opdateret Queue Status**: Viser kun færdige runs (status != 'running') med korrekte statistikker
+    - **Robust fejlhåndtering**: 15-sekunders timeout, komplet error logging, og graceful degradation
+  - **Tekniske forbedringer**:
+    - **Unique index på `minute_bucket`**: Sikrer kun én record per minut-vindue
+    - **Status tracking**: 'running' → 'success'/'partial'/'error' med præcise timestamps
+    - **Præcise metrics**: `posts_found`, `published_ok`, `posts_failed`, `duration_ms`
+    - **Idempotent operations**: Bruger `ON CONFLICT` til at undgå duplikater
+  - **Resultat**: 
+    - ✅ Queue-siden viser nu 100% korrekte data for hver minut-kørsel
+    - ✅ Ingen tomme kørsler - kun færdige runs med præcise tal vises
+    - ✅ Minut-præcision - hver kørsel viser data for sit specifikke tidsvindue
+    - ✅ Robust og skalerbart system der kan håndtere høje volumener
+
 ### **Next Steps**
-- [ ] Token refresh implementering
-- [ ] Chrome function til automatisk udgivelse af planlagte opslag (nu meget nemmere!)
+- [x] ✅ Automatisk udgivelse af planlagte opslag via cron
+- [x] ✅ Queue Status Dashboard til monitoring
+- [ ] Token refresh implementering (hvis nødvendigt)
 - [ ] Error handling forbedringer for fejlede billeduploads
 - [ ] Bulk post scheduling (fremtidig feature)
 

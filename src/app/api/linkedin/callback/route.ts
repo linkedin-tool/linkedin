@@ -94,6 +94,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/integration?connected=linkedin", req.url));
   } catch (e: unknown) {
     console.error("LinkedIn callback error:", e);
-    return NextResponse.redirect(new URL(`/dashboard/integration?linkedin_error=${encodeURIComponent(e instanceof Error ? e.message : 'Unknown error')}`, req.url));
+    return NextResponse.redirect(new URL(`/dashboard/integration?linkedin_error=${encodeURIComponent(e instanceof Error ? e.message : 'Noget gik galt. Prøv igen.')}`, req.url));
   }
 }

@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     console.error("Error publishing scheduled post:", e);
     return NextResponse.json({ 
-      error: e instanceof Error ? e.message : 'Unknown error',
+      error: e instanceof Error ? e.message : 'Noget gik galt. Prøv igen.',
       details: "Failed to publish scheduled post"
     }, { status: 400 });
   }

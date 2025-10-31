@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit } from "lucide-react";
+import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
 
@@ -23,6 +23,7 @@ export default function NewPostPage() {
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [returnTo, setReturnTo] = useState<string>('mine-opslag');
+  const [editPostStatus, setEditPostStatus] = useState<string | null>(null);
 
   // Funktion til at få den korrekte return URL
   const getReturnUrl = () => {
@@ -45,6 +46,7 @@ export default function NewPostPage() {
     const postScheduledDate = searchParams.get('scheduledDate');
     const postScheduledTime = searchParams.get('scheduledTime');
     const returnToParam = searchParams.get('returnTo');
+    const postStatus = searchParams.get('status');
 
     // Sæt returnTo baseret på parameter eller default
     if (returnToParam) {
@@ -58,6 +60,10 @@ export default function NewPostPage() {
       
       if (postVisibility === 'CONNECTIONS' || postVisibility === 'PUBLIC') {
         setVisibility(postVisibility);
+      }
+      
+      if (postStatus) {
+        setEditPostStatus(postStatus);
       }
       
       if (postScheduledDate && postScheduledTime) {
@@ -82,15 +88,21 @@ export default function NewPostPage() {
     }
   }, [searchParams]);
 
-  async function onSubmit(e: React.FormEvent, publishType: "now" | "schedule" = "now") {
+  async function onSubmit(e: React.FormEvent, publishType?: "now" | "schedule" | "draft") {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Forskellige beskeder baseret på edit mode
-    if (isEditMode) {
+    // Forskellige beskeder baseret på edit mode og publish type
+    if (isEditMode && !publishType) {
       setStatus("Gemmer ændringer...");
     } else if (publishType === "schedule") {
       setStatus("Gemmer opslag og planlægger udgivelse...");
+    } else if (publishType === "draft") {
+      setStatus("Gemmer opslag som kladde...");
+    } else if (publishType === "now") {
+      setStatus("Sender til LinkedIn...");
+    } else if (isEditMode) {
+      setStatus("Gemmer ændringer...");
     } else {
       setStatus("Sender til LinkedIn...");
     }
@@ -102,6 +114,16 @@ export default function NewPostPage() {
     // Hvis vi er i edit mode, brug update endpoint
     if (isEditMode && editPostId) {
       fd.append("postId", editPostId);
+      
+      // Hvis vi eksplicit ændrer status fra draft til published eller scheduled
+      if (editPostStatus === 'draft' && publishType) {
+        if (publishType === 'now') {
+          fd.append("newStatus", "published");
+        } else if (publishType === 'schedule') {
+          fd.append("newStatus", "scheduled");
+        }
+        // Hvis publishType === 'draft' eller ikke angivet, ændres status ikke
+      }
       
       // Hvis der er en planlagt tid, inkluder den
       if (scheduledDate && scheduledTime) {
@@ -148,7 +170,7 @@ export default function NewPostPage() {
     }
     
     // Normal oprettelse af nyt opslag
-    fd.append("publishType", publishType);
+    fd.append("publishType", publishType || "now");
     
     if (publishType === "schedule" && scheduledDate && scheduledTime) {
       // Send den lokale tid direkte uden timezone konvertering
@@ -169,7 +191,30 @@ export default function NewPostPage() {
       if (!res.ok) {
         setStatus(`Fejl: ${body?.error || res.statusText}`);
       } else {
-        if (publishType === "schedule") {
+        if (publishType === "draft") {
+          // Kladde gemt
+          await Swal.fire({
+            title: 'Kladde gemt!',
+            text: 'Dit opslag er gemt som en kladde. Du kan redigere og udgive det senere.',
+            icon: 'success',
+            timer: 3000,
+            timerProgressBar: false,
+            toast: true,
+            showClass: {
+              popup: 'swal2-toast-fade-in'
+            },
+            hideClass: {
+              popup: 'swal2-toast-fade-out'
+            },
+            position: 'top-end',
+            showConfirmButton: false
+          });
+          
+          // Naviger tilbage til Mine Opslag efter kort pause
+          setTimeout(() => {
+            window.location.href = "/dashboard/mine-opslag";
+          }, 1000);
+        } else if (publishType === "schedule") {
           let statusMessage = "";
           
           // Vis information om billede upload status
@@ -224,8 +269,14 @@ export default function NewPostPage() {
             text: successText,
             icon: 'success',
             timer: 3000,
-            timerProgressBar: true,
+            timerProgressBar: false,
             toast: true,
+            showClass: {
+              popup: 'swal2-toast-fade-in'
+            },
+            hideClass: {
+              popup: 'swal2-toast-fade-out'
+            },
             position: 'top-end',
             showConfirmButton: false
           });
@@ -340,6 +391,8 @@ export default function NewPostPage() {
               ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
               : status.includes("planlagt") || status.includes("Planlagt")
               ? "bg-gradient-to-r from-purple-50 to-purple-50 border-purple-200"
+              : status.includes("kladde") || status.includes("Kladde")
+              ? "bg-gradient-to-r from-gray-50 to-gray-50 border-gray-200"
               : "bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200"
           }`}>
             <div className="flex items-center space-x-4">
@@ -350,6 +403,8 @@ export default function NewPostPage() {
                   ? "bg-green-600"
                   : status.includes("planlagt") || status.includes("Planlagt")
                   ? "bg-purple-600"
+                  : status.includes("kladde") || status.includes("Kladde")
+                  ? "bg-gray-600"
                   : "bg-blue-600"
               }`}>
                 {status.includes("Fejl") || status.includes("fejl") ? (
@@ -358,6 +413,8 @@ export default function NewPostPage() {
                   <CheckCircle className="w-6 h-6 text-white" />
                 ) : status.includes("planlagt") || status.includes("Planlagt") ? (
                   <Calendar className="w-6 h-6 text-white" />
+                ) : status.includes("kladde") || status.includes("Kladde") ? (
+                  <FileEdit className="w-6 h-6 text-white" />
                 ) : (
                   <PlusCircle className="w-6 h-6 text-white" />
                 )}
@@ -370,6 +427,8 @@ export default function NewPostPage() {
                     ? "Opslag udgivet! 🎉"
                     : status.includes("planlagt") || status.includes("Planlagt")
                     ? "Opslag planlagt! 📅"
+                    : status.includes("kladde") || status.includes("Kladde")
+                    ? "Kladde gemt! 📝"
                     : status.includes("Gemmer") || status.includes("planlægger")
                     ? "Planlægger opslag..."
                     : status.includes("Ændringer gemt") || status.includes("ændringer")
@@ -553,7 +612,7 @@ export default function NewPostPage() {
             </div>
 
 
-            <div className="pt-4 flex gap-4">
+            <div className="pt-4 flex flex-wrap gap-4">
               <Button 
                 type="submit" 
                 disabled={isSubmitting || !text.trim()} 
@@ -571,16 +630,29 @@ export default function NewPostPage() {
               </Button>
               
               {!isEditMode && (
-                <Button 
-                  type="button"
-                  onClick={() => setShowScheduleModal(true)}
-                  disabled={isSubmitting || !text.trim()} 
-                  variant="outline"
-                  className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Planlæg
-                </Button>
+                <>
+                  <Button 
+                    type="button"
+                    onClick={() => setShowScheduleModal(true)}
+                    disabled={isSubmitting || !text.trim()} 
+                    variant="outline"
+                    className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Planlæg
+                  </Button>
+                  
+                  <Button 
+                    type="button"
+                    onClick={(e) => onSubmit(e, "draft")}
+                    disabled={isSubmitting || !text.trim()} 
+                    variant="outline"
+                    className="px-8 h-11 border-gray-600 text-gray-600 hover:bg-gray-50"
+                  >
+                    <FileEdit className="w-4 h-4" />
+                    Gem som kladde
+                  </Button>
+                </>
               )}
               
               {isEditMode && scheduledDate && scheduledTime && (
@@ -594,6 +666,33 @@ export default function NewPostPage() {
                   <Calendar className="w-4 h-4" />
                   Ændre planlagt tid
                 </Button>
+              )}
+              
+              {/* Ekstra muligheder for kladder i edit mode */}
+              {isEditMode && editPostStatus === 'draft' && (
+                <>
+                  <Button 
+                    type="button"
+                    onClick={(e) => onSubmit(e, "now")}
+                    disabled={isSubmitting || !text.trim()} 
+                    variant="outline"
+                    className="px-8 h-11 border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    <Send className="w-4 h-4" />
+                    Udgiv nu
+                  </Button>
+                  
+                  <Button 
+                    type="button"
+                    onClick={() => setShowScheduleModal(true)}
+                    disabled={isSubmitting || !text.trim()} 
+                    variant="outline"
+                    className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Planlæg opslag
+                  </Button>
+                </>
               )}
             </div>
           </form>

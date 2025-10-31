@@ -67,7 +67,7 @@ async function uploadImageToLinkedIn(accessToken: string, personUrn: string, ima
     return {
       linkedinImageUrn: null,
       uploadStatus: 'failed' as const,
-      error: error instanceof Error ? error.message : 'Unknown upload error'
+      error: error instanceof Error ? error.message : 'Billede upload fejlede'
     };
   }
 }
@@ -215,19 +215,28 @@ export async function POST(req: NextRequest) {
     }
     
     const scheduledForLocal = form.get("scheduledFor") as string | null;
-    const publishType = String(form.get("publishType") || "now"); // "now" or "schedule"
+    const publishType = String(form.get("publishType") || "now"); // "now", "schedule", or "draft"
     
     // Konverter lokal tid til UTC for database storage
     let scheduledForUTC: string | null = null;
     if (scheduledForLocal && publishType === "schedule") {
       // scheduledForLocal er i format "YYYY-MM-DDTHH:MM:SS" (dansk tid)
-      // Konverter til UTC for konsistent database storage
-      const localDate = new Date(scheduledForLocal);
+      // Parse dato komponenter og konstruer Date objekt eksplicit som lokal tid
+      const [datePart, timePart] = scheduledForLocal.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute, second = 0] = timePart.split(':').map(Number);
+      
+      // Konstruer Date objekt eksplicit som lokal tid (ikke UTC)
+      const localDate = new Date(year, month - 1, day, hour, minute, second);
+      
+      // Konverter til UTC for database storage
       scheduledForUTC = localDate.toISOString();
+      
       console.log("Scheduled time conversion:", {
         local: scheduledForLocal,
         utc: scheduledForUTC,
-        localParsed: localDate.toString()
+        localParsed: localDate.toString(),
+        localDateTime: `${year}-${month}-${day} ${hour}:${minute}:${second}`
       });
     }
 
@@ -251,9 +260,10 @@ export async function POST(req: NextRequest) {
       originalName: string;
     }> = [];
 
-    // Upload alle billeder til LinkedIn med det samme (både for planlagte og øjeblikkelige opslag)
+    // Upload billeder baseret på publish type
     if (images.length > 0) {
-      console.log(`Processing ${images.length} image uploads for`, publishType === "schedule" ? "scheduled" : "immediate", "post");
+      const uploadType = publishType === "draft" ? "draft" : (publishType === "schedule" ? "scheduled" : "immediate");
+      console.log(`Processing ${images.length} image uploads for ${uploadType} post`);
       
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
@@ -269,40 +279,58 @@ export async function POST(req: NextRequest) {
           originalName: image.name
         };
         
-        // Upload til LinkedIn
-        try {
-          const linkedinUploadResult = await uploadImageToLinkedIn(accessToken, personUrn, image);
-          result.uploadStatus = linkedinUploadResult.uploadStatus;
-          result.uploadError = linkedinUploadResult.error;
-          result.linkedinImageUrn = linkedinUploadResult.linkedinImageUrn;
-          
-          if (linkedinUploadResult.uploadStatus === 'uploaded' && linkedinUploadResult.linkedinImageUrn) {
-            imageAssetUrns.push(linkedinUploadResult.linkedinImageUrn);
-            console.log(`LinkedIn image upload ${i + 1} successful:`, linkedinUploadResult.linkedinImageUrn);
-          } else {
-            console.error(`LinkedIn image upload ${i + 1} failed:`, linkedinUploadResult.error);
+        // For kladder: kun upload til Supabase
+        if (publishType === "draft") {
+          try {
+            result.supabaseImageUrl = await optimizeAndUploadToSupabase(image, supabase, user.id);
+            result.uploadStatus = 'uploaded';
+            console.log(`Supabase image upload ${i + 1} successful for draft:`, result.supabaseImageUrl);
+          } catch (error) {
+            console.error(`Supabase image upload ${i + 1} failed for draft:`, error);
+            result.uploadStatus = 'failed';
+            result.uploadError = error instanceof Error ? error.message : 'Billede upload fejlede';
           }
-        } catch (error) {
-          console.error(`LinkedIn image upload ${i + 1} error:`, error);
-          result.uploadStatus = 'failed';
-          result.uploadError = error instanceof Error ? error.message : 'Unknown error';
-        }
-        
-        // Upload optimeret version til Supabase Storage (for miniature/preview)
-        try {
-          result.supabaseImageUrl = await optimizeAndUploadToSupabase(image, supabase, user.id);
-          console.log(`Supabase image upload ${i + 1} successful:`, result.supabaseImageUrl);
-        } catch (error) {
-          console.error(`Supabase image upload ${i + 1} failed:`, error);
-          // Fortsæt selvom Supabase upload fejler - LinkedIn upload er vigtigere
+        } else {
+          // For planlagte og øjeblikkelige opslag: upload til både LinkedIn og Supabase
+          // Upload til LinkedIn
+          try {
+            const linkedinUploadResult = await uploadImageToLinkedIn(accessToken, personUrn, image);
+            result.uploadStatus = linkedinUploadResult.uploadStatus;
+            result.uploadError = linkedinUploadResult.error;
+            result.linkedinImageUrn = linkedinUploadResult.linkedinImageUrn;
+            
+            if (linkedinUploadResult.uploadStatus === 'uploaded' && linkedinUploadResult.linkedinImageUrn) {
+              imageAssetUrns.push(linkedinUploadResult.linkedinImageUrn);
+              console.log(`LinkedIn image upload ${i + 1} successful:`, linkedinUploadResult.linkedinImageUrn);
+            } else {
+              console.error(`LinkedIn image upload ${i + 1} failed:`, linkedinUploadResult.error);
+            }
+          } catch (error) {
+            console.error(`LinkedIn image upload ${i + 1} error:`, error);
+            result.uploadStatus = 'failed';
+            result.uploadError = error instanceof Error ? error.message : 'Billede upload fejlede';
+          }
+          
+          // Upload optimeret version til Supabase Storage (for miniature/preview)
+          try {
+            result.supabaseImageUrl = await optimizeAndUploadToSupabase(image, supabase, user.id);
+            console.log(`Supabase image upload ${i + 1} successful:`, result.supabaseImageUrl);
+          } catch (error) {
+            console.error(`Supabase image upload ${i + 1} failed:`, error);
+            // Fortsæt selvom Supabase upload fejler - LinkedIn upload er vigtigere for ikke-kladder
+          }
         }
         
         imageUploadResults.push(result);
       }
     }
 
-    // Hvis det er et planlagt opslag, gem kun i database
-    if (publishType === "schedule" && scheduledForUTC) {
+    // Håndter forskellige publish typer
+    if (publishType === "draft") {
+      status = "draft";
+      publishedAt = null;
+      console.log("Saving post as draft");
+    } else if (publishType === "schedule" && scheduledForUTC) {
       status = "scheduled";
       publishedAt = null;
       console.log("Scheduling post with pre-uploaded images:", { imageAssetUrns });
@@ -375,6 +403,6 @@ export async function POST(req: NextRequest) {
       }))
     });
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 400 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Noget gik galt. Prøv igen.' }, { status: 400 });
   }
 }

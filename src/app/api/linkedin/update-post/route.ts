@@ -72,7 +72,7 @@ async function uploadImageToLinkedIn(accessToken: string, personUrn: string, ima
     return {
       linkedinImageUrn: null,
       uploadStatus: 'failed' as const,
-      error: error instanceof Error ? error.message : 'Unknown upload error'
+      error: error instanceof Error ? error.message : 'Billede upload fejlede'
     };
   }
 }
@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
     const text = String(form.get("text") || "");
     const visibility = String(form.get("visibility") || "PUBLIC");
     const scheduledForLocal = form.get("scheduledFor") as string | null;
+    const newStatus = form.get("newStatus") as string | null;
     // Håndter flere billeder
     const images: File[] = [];
     const keepImageUrls: string[] = [];
@@ -141,7 +142,16 @@ export async function POST(req: NextRequest) {
     // Konverter lokal tid til UTC for database storage
     let scheduledForUTC: string | null = null;
     if (scheduledForLocal) {
-      const localDate = new Date(scheduledForLocal);
+      // scheduledForLocal er i format "YYYY-MM-DDTHH:MM:SS" (dansk tid)
+      // Parse dato komponenter og konstruer Date objekt eksplicit som lokal tid
+      const [datePart, timePart] = scheduledForLocal.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute, second = 0] = timePart.split(':').map(Number);
+      
+      // Konstruer Date objekt eksplicit som lokal tid (ikke UTC)
+      const localDate = new Date(year, month - 1, day, hour, minute, second);
+      
+      // Konverter til UTC for database storage
       scheduledForUTC = localDate.toISOString();
     }
 
@@ -173,6 +183,15 @@ export async function POST(req: NextRequest) {
     // Opdater scheduled_for hvis det er angivet
     if (scheduledForUTC) {
       updateData.scheduled_for = scheduledForUTC;
+    }
+
+    // Opdater status hvis newStatus er angivet
+    if (newStatus) {
+      const validStatuses = ['draft', 'scheduled', 'published', 'failed'];
+      if (!validStatuses.includes(newStatus)) {
+        return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+      }
+      updateData.status = newStatus;
     }
 
     // Håndter billede ændringer - slet billeder der ikke skal beholdes
@@ -239,7 +258,7 @@ export async function POST(req: NextRequest) {
     if (images.length > 0) {
       console.log(`Processing ${images.length} new image uploads in edit mode`);
       
-      // Hent LinkedIn profil for upload
+      // Hent LinkedIn profil for upload - billeder skal altid uploades til LinkedIn for pre-upload
       const profile = await getLinkedInProfile(supabase, user.id) as any;
       const accessToken = await ensureAccessToken(profile);
       const personUrn = profile.person_urn as string;
@@ -273,7 +292,7 @@ export async function POST(req: NextRequest) {
         } catch (error) {
           console.error(`LinkedIn image upload ${i + 1} error in edit mode:`, error);
           result.uploadStatus = 'failed';
-          result.uploadError = error instanceof Error ? error.message : 'Unknown error';
+          result.uploadError = error instanceof Error ? error.message : 'Billede upload fejlede';
         }
         
         // Upload optimeret version til Supabase Storage
@@ -301,6 +320,106 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error("Error updating post:", updateError);
       throw updateError;
+    }
+
+    // Hvis status ændres til "published", udgiv til LinkedIn
+    if (newStatus === 'published') {
+      try {
+        // Hent LinkedIn access token
+        const { data: profile, error: profileError } = await supabase
+          .from("linkedin_profiles" as any)
+          .select("access_token, linkedin_id")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileError || !profile) {
+          throw new Error("LinkedIn access token not found");
+        }
+
+        const profileData = profile as any;
+        
+        if (!profileData.access_token) {
+          throw new Error("LinkedIn access token not found");
+        }
+
+        // Forbered LinkedIn post data
+        const linkedinPostData: any = {
+          author: `urn:li:person:${profileData.linkedin_id}`,
+          lifecycleState: "PUBLISHED",
+          specificContent: {
+            "com.linkedin.ugc.ShareContent": {
+              shareCommentary: {
+                text: text
+              },
+              shareMediaCategory: imageUploadResults.length > 0 ? "IMAGE" : "NONE"
+            }
+          },
+          visibility: {
+            "com.linkedin.ugc.MemberNetworkVisibility": visibility
+          }
+        };
+
+        // Tilføj billeder hvis der er nogen
+        if (imageUploadResults.length > 0) {
+          const mediaUrns = imageUploadResults
+            .filter(result => result.linkedinImageUrn)
+            .map(result => ({ media: result.linkedinImageUrn }));
+          
+          if (mediaUrns.length > 0) {
+            linkedinPostData.specificContent["com.linkedin.ugc.ShareContent"].media = mediaUrns;
+          }
+        }
+
+        // Udgiv til LinkedIn
+        const linkedinResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${profileData.access_token}`,
+            'Content-Type': 'application/json',
+            'X-Restli-Protocol-Version': '2.0.0'
+          },
+          body: JSON.stringify(linkedinPostData)
+        });
+
+        if (!linkedinResponse.ok) {
+          const errorText = await linkedinResponse.text();
+          console.error('LinkedIn API error:', errorText);
+          throw new Error(`LinkedIn publishing failed: ${linkedinResponse.status}`);
+        }
+
+        const linkedinResult = await linkedinResponse.json();
+        
+        // Opdater post med LinkedIn ID og published_at
+        await supabase
+          .from("linkedin_posts" as any)
+          .update({
+            ugc_post_id: linkedinResult.id,
+            published_at: new Date().toISOString(),
+            status: 'published'
+          })
+          .eq("id", postId);
+
+        console.log('Successfully published to LinkedIn:', linkedinResult.id);
+        
+      } catch (linkedinError) {
+        console.error('Error publishing to LinkedIn:', linkedinError);
+        
+        // Opdater status til failed hvis LinkedIn publishing fejler
+        await supabase
+          .from("linkedin_posts" as any)
+          .update({
+            status: 'failed',
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", postId);
+        
+        // Returner fejl til frontend
+        return NextResponse.json({ 
+          error: `Post updated but LinkedIn publishing failed: ${linkedinError instanceof Error ? linkedinError.message : 'Unknown error'}`,
+          postUpdated: true,
+          linkedinPublished: false
+        }, { status: 400 });
+      }
     }
 
     // Gem nye billeder i den separate tabel
@@ -347,7 +466,7 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     console.error("Error updating post:", e);
     return NextResponse.json({ 
-      error: e instanceof Error ? e.message : 'Unknown error',
+      error: e instanceof Error ? e.message : 'Noget gik galt. Prøv igen.',
       details: "Failed to update post"
     }, { status: 400 });
   }
