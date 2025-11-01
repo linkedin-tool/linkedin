@@ -26,7 +26,7 @@ interface UserProfile {
   name: string
   email: string
   phone: string | null
-  created_at: string
+  created_at: string | null
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
   subscription_plan?: string | null

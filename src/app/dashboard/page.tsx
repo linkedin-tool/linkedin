@@ -26,7 +26,7 @@ interface UserProfile {
   subscription_plan?: string | null
   subscription_status?: string | null
   trial_end?: string | null
-  created_at: string
+  created_at: string | null
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
 }
