@@ -30,11 +30,10 @@ interface UserProfile {
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [activeTab, setActiveTab] = useState('company')
+  const [activeTab, setActiveTab] = useState('profile')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -46,7 +45,7 @@ export default function SettingsPage() {
   useEffect(() => {
     // Check for tab parameter in URL
     const tabParam = searchParams?.get('tab')
-    if (tabParam && (tabParam === 'company' || tabParam === 'subscription')) {
+    if (tabParam && (tabParam === 'profile' || tabParam === 'subscription')) {
       setActiveTab(tabParam)
     }
   }, [searchParams])
@@ -68,7 +67,6 @@ export default function SettingsPage() {
         setFormData({
           name: profileData.name || '',
           email: profileData.email || '',
-          phone: profileData.phone || '',
         })
       }
 
@@ -91,7 +89,6 @@ export default function SettingsPage() {
       .update({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
       })
       .eq('id', user.id)
 
@@ -240,7 +237,6 @@ export default function SettingsPage() {
         body: JSON.stringify({
           email: userProfile.email,
           name: userProfile.name,
-          phone: userProfile.phone || '',
         }),
       })
 
@@ -270,7 +266,7 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: 'company', label: 'Virksomhed', icon: Building2 },
+    { id: 'profile', label: 'Profil', icon: Building2 },
     { id: 'subscription', label: 'Abonnement', icon: Crown },
   ]
 
@@ -278,7 +274,7 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Indstillinger</h1>
-        <p className="text-lg text-gray-600">Administrer dine kontooplysninger og abonnement</p>
+        <p className="text-lg text-gray-600">Administrer dine profiloplysninger og abonnement</p>
       </div>
 
       {/* Tabs */}
@@ -305,8 +301,8 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-4xl">
-        {/* Company Tab */}
-        {activeTab === 'company' && (
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
           <div className="space-y-8">
             <Card className="p-8 bg-white border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
@@ -350,19 +346,6 @@ export default function SettingsPage() {
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       placeholder="din@email.dk"
                       required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="phone" className="block text-base font-medium text-gray-700 mb-2">
-                      Telefonnummer
-                    </label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="+45 12 34 56 78"
                     />
                   </div>
                 </div>

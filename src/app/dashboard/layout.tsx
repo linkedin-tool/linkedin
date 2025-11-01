@@ -17,7 +17,8 @@ import {
   PlusCircle,
   FileText,
   Calendar,
-  Activity
+  Activity,
+  Brain
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { LinkedInNotificationBanner } from '@/components/LinkedInNotificationBanner'
@@ -148,6 +149,12 @@ export default function DashboardLayout({
       href: '/dashboard/mine-opslag', 
       icon: FileText,
       current: pathname === '/dashboard/mine-opslag' 
+    },
+    { 
+      name: 'Træn din AI', 
+      href: '/dashboard/train-ai', 
+      icon: Brain,
+      current: pathname === '/dashboard/train-ai' 
     },
   ]
 
