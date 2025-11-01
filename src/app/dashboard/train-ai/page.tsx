@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { 
   Brain, 
   User, 
@@ -17,12 +15,6 @@ import {
   CheckCircle,
   Lightbulb
 } from 'lucide-react'
-
-interface UserProfile {
-  id: string
-  name: string
-  email: string
-}
 
 interface AITrainingData {
   personal_background?: string
@@ -38,11 +30,9 @@ interface AITrainingData {
 
 export default function TrainAIPage() {
   const searchParams = useSearchParams()
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [activeTab, setActiveTab] = useState('personal')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
   
   const [trainingData, setTrainingData] = useState<AITrainingData>({
@@ -73,16 +63,6 @@ export default function TrainAIPage() {
       
       if (!user) return
 
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileData) {
-        setUserProfile(profileData)
-      }
-
       // TODO: Fetch existing AI training data from database when we create the table
       // For now, we'll use local state
 
@@ -94,7 +74,6 @@ export default function TrainAIPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    setMessage('')
 
     // TODO: Save to database when we create the ai_training table
     // For now, we'll just simulate saving
@@ -410,7 +389,7 @@ export default function TrainAIPage() {
                       <h4 className="font-medium text-blue-900 mb-2">Tip til bedre AI-træning</h4>
                       <p className="text-blue-800 text-sm">
                         Vælg de indholdstyper, du oftest skriver om eller gerne vil skrive mere om. 
-                        Dette hjælper AI'en med at foreslå relevante emner og strukturere dine opslag korrekt.
+                        Dette hjælper AI&apos;en med at foreslå relevante emner og strukturere dine opslag korrekt.
                       </p>
                     </div>
                   </div>
@@ -455,7 +434,7 @@ Har du nogensinde oplevet at...
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none font-mono text-sm text-gray-900 placeholder-gray-500"
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Jo flere eksempler du giver, desto bedre bliver AI'en til at efterligne din stil
+                    Jo flere eksempler du giver, desto bedre bliver AI&apos;en til at efterligne din stil
                   </p>
                 </div>
 
@@ -465,7 +444,7 @@ Har du nogensinde oplevet at...
                     <div>
                       <h4 className="font-medium text-yellow-900 mb-2">Sådan bruges dine eksempler</h4>
                       <p className="text-yellow-800 text-sm">
-                        AI'en analyserer dine opslag for at lære din tone, struktur, ordvalg og emner. 
+                        AI&apos;en analyserer dine opslag for at lære din tone, struktur, ordvalg og emner. 
                         Vælg opslag der repræsenterer din bedste skrivestil og som har fået god engagement.
                       </p>
                     </div>
