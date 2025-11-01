@@ -61,7 +61,7 @@ export function DateTimePicker({
       
       // Reset date to midnight for comparison - only disable dates BEFORE today (not today itself)
       const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const isDisabled = dateMidnight < todayMidnight;
+      const isDisabled = dateMidnight < minDateObj;
       
       days.push({
         date,
@@ -92,10 +92,9 @@ export function DateTimePicker({
   const handleDateSelect = (date: Date) => {
     // Reset date to midnight for comparison
     const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     
-    // Only block dates BEFORE today (allow today)
-    if (dateMidnight < todayMidnight) return;
+    // Only block dates BEFORE minDate (allow minDate itself)
+    if (dateMidnight < minDateObj) return;
     
     // Brug lokal dato uden timezone konvertering
     const year = date.getFullYear();
@@ -107,7 +106,7 @@ export function DateTimePicker({
     // Hvis der ikke er valgt et tidspunkt endnu, sæt default baseret på om det er i dag
     if (!selectedTime) {
       // Hvis det er i dag, sæt default til næste time (eller minimum 1 time frem)
-      if (dateMidnight.getTime() === todayMidnight.getTime()) {
+      if (dateMidnight.getTime() === minDateObj.getTime()) {
         const now = new Date();
         const nextHour = now.getHours() + 1;
         const defaultHour = nextHour >= 24 ? '00' : nextHour.toString().padStart(2, '0');
@@ -118,7 +117,7 @@ export function DateTimePicker({
       }
     } else {
       // Valider at det valgte tidspunkt ikke er i fortiden hvis det er i dag
-      if (dateMidnight.getTime() === todayMidnight.getTime()) {
+      if (dateMidnight.getTime() === minDateObj.getTime()) {
         const now = new Date();
         const [year, month, day] = dateString.split('-').map(Number);
         const [hour, minute] = selectedTime.split(':');
@@ -149,11 +148,10 @@ export function DateTimePicker({
       const [year, month, day] = selectedDate.split('-').map(Number);
       const selectedDateTime = new Date(year, month - 1, day, parseInt(hour), parseInt(minute));
       const now = new Date();
-      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const selectedDateMidnight = new Date(year, month - 1, day);
       
       // Hvis det er i dag og tidspunktet er i fortiden, sæt til næste time
-      if (selectedDateMidnight.getTime() === todayMidnight.getTime() && selectedDateTime < now) {
+      if (selectedDateMidnight.getTime() === minDateObj.getTime() && selectedDateTime < now) {
         const nextHour = now.getHours() + 1;
         const defaultHour = nextHour >= 24 ? '00' : nextHour.toString().padStart(2, '0');
         // Brug setTimeout for at undgå rekursivt kald under rendering

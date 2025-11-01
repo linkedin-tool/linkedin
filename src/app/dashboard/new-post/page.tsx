@@ -283,8 +283,8 @@ export default function NewPostPage() {
           
           // Naviger tilbage til den korrekte side efter kort pause
           setTimeout(() => {
-            // Hvis vi er i edit mode, brug returnTo, ellers gå til dashboard
-            const targetUrl = isEditMode ? getReturnUrl() : "/dashboard";
+            // Hvis vi er i edit mode, brug returnTo, ellers gå til mine-opslag
+            const targetUrl = isEditMode ? getReturnUrl() : "/dashboard/mine-opslag";
             window.location.href = targetUrl;
           }, 1000);
         }

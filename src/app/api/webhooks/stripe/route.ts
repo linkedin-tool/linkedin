@@ -32,10 +32,8 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         console.log(`Processing subscription event: ${event.type} for customer: ${(event.data.object as any).customer}`)
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const subscription = event.data.object as any
           const isNewSubscription = event.type === 'customer.subscription.created'
           
@@ -129,7 +127,6 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const subscription = event.data.object as any
         
         // Get cancellation timestamp from Stripe
@@ -160,7 +157,6 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const invoice = event.data.object as any
         
         // Update subscription status on successful payment
@@ -180,7 +176,6 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const invoice = event.data.object as any
         
         // Update subscription status on failed payment

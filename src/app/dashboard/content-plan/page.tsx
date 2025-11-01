@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Lightbox } from "@/components/ui/lightbox";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Image, Send, Edit, Trash2, FileEdit, Eye } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Image, Send, Edit, Trash2, FileEdit, Eye, Repeat2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Swal from 'sweetalert2';
 
@@ -18,6 +18,8 @@ interface LinkedInPost {
   scheduled_for: string | null;
   published_at: string | null;
   created_at: string;
+  is_repost?: boolean;
+  original_post_urn?: string | null;
   images?: Array<{
     id: string;
     image_url: string | null;
@@ -47,6 +49,13 @@ export default function ContentPlanPage() {
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<Array<{id: string, url: string, alt?: string}>>([]);
   const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
+  const [showDayPostsModal, setShowDayPostsModal] = useState(false);
+  const [selectedDayPosts, setSelectedDayPosts] = useState<{date: string, posts: LinkedInPost[]}>({date: '', posts: []});
+  const [showRepostModal, setShowRepostModal] = useState(false);
+  const [repostComment, setRepostComment] = useState("");
+  const [originalPost, setOriginalPost] = useState<LinkedInPost | null>(null);
+
+  const supabase = createClient();
 
   // Hent alle opslag fra databasen
   useEffect(() => {
@@ -152,10 +161,6 @@ export default function ContentPlanPage() {
     });
   };
 
-  const handlePostClick = (post: LinkedInPost) => {
-    setSelectedPost(post);
-    setShowPostModal(true);
-  };
 
   const formatPostDate = (post: LinkedInPost) => {
     if (post.scheduled_for) {
@@ -178,21 +183,48 @@ export default function ContentPlanPage() {
     return "";
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published':
-        return 'bg-green-500';
-      case 'scheduled':
-        return 'bg-blue-500';
-      case 'draft':
-        return 'bg-gray-600'; // Darker gray for better visibility
-      case 'failed':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+  // Konverter URN til LinkedIn URL
+  const convertUrnToLinkedInUrl = (ugcPostId: string): string => {
+    const shareId = ugcPostId.replace('urn:li:share:', '');
+    return `https://www.linkedin.com/feed/update/urn:li:activity:${shareId}`;
+  };
+
+  // Hent original post for genopslag
+  const fetchOriginalPost = async (originalPostUrn: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: originalPostData, error } = await supabase
+        .from("linkedin_posts" as any)
+        .select(`
+          *,
+          images:linkedin_post_images(*)
+        `)
+        .eq("ugc_post_id", originalPostUrn)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!error && originalPostData) {
+        setOriginalPost(originalPostData as any);
+      }
+    } catch (err) {
+      console.error("Error fetching original post:", err);
     }
   };
 
+  // Åbn post modal og hent original post hvis det er et genopslag
+  const handleOpenPostModal = async (post: LinkedInPost) => {
+    setSelectedPost(post);
+    setOriginalPost(null); // Reset original post
+    setShowPostModal(true);
+    
+    if (post.is_repost && post.original_post_urn) {
+      await fetchOriginalPost(post.original_post_urn);
+    }
+  };
+
+  // Standardiserede styling funktioner
   const getVisibilityStyle = (visibility: string) => {
     switch (visibility) {
       case 'PUBLIC':
@@ -212,6 +244,38 @@ export default function ContentPlanPage() {
         return 'Kun forbindelser';
       default:
         return visibility;
+    }
+  };
+
+  // Formatér dato til visning
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('da-DK', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status: string, isRepost?: boolean) => {
+    // Genopslag får altid lilla farve uanset status
+    if (isRepost) {
+      return 'bg-purple-500';
+    }
+    
+    switch (status) {
+      case 'published':
+        return 'bg-green-500';
+      case 'scheduled':
+        return 'bg-blue-500';
+      case 'draft':
+        return 'bg-gray-600'; // Darker gray for better visibility
+      case 'failed':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
@@ -249,13 +313,6 @@ export default function ContentPlanPage() {
       default:
         return 'Ukendt';
     }
-  };
-
-  // Konverter URN til LinkedIn URL
-  const convertUrnToLinkedInUrl = (ugcPostId: string): string => {
-    // Konverter fra urn:li:share:7390097987139629056 til https://www.linkedin.com/feed/update/urn:li:activity:7390097987139629056
-    const shareId = ugcPostId.replace('urn:li:share:', '');
-    return `https://www.linkedin.com/feed/update/urn:li:share:${shareId}`;
   };
 
   const handlePublishNow = async (postId: string) => {
@@ -329,8 +386,8 @@ export default function ContentPlanPage() {
   const handleReschedule = (post: LinkedInPost) => {
     setShowPostModal(false);
     
-    if (post.status === 'draft') {
-      // For kladder: brug schedule modal (ny planlægning)
+    if (post.status === 'draft' || post.status === 'failed') {
+      // For kladder og fejlede opslag: brug schedule modal (ny planlægning)
       // Default til i morgen kl. 10:00
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -527,6 +584,96 @@ export default function ContentPlanPage() {
         confirmButtonColor: '#dc2626'
       });
       // Sæt loading til false kun ved fejl (success case håndteres tidligere)
+      setActionLoading(false);
+    }
+  };
+
+  // Handle repost
+  const handleRepost = (post: LinkedInPost) => {
+    setSelectedPost(post);
+    setRepostComment("");
+    setShowRepostModal(true);
+  };
+
+  // Handle repost submit
+  const handleRepostSubmit = async () => {
+    if (!selectedPost || !selectedPost.ugc_post_id) return;
+
+    setActionLoading(true);
+
+    try {
+      const response = await fetch('/api/linkedin/repost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalPostUrn: selectedPost.ugc_post_id,
+          commentary: repostComment.trim() || undefined,
+          visibility: selectedPost.visibility
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fejl ved genopslag');
+      }
+
+      // Stop loading øjeblikkeligt efter success
+      setActionLoading(false);
+
+      // Luk modal og reset
+      setShowRepostModal(false);
+      setSelectedPost(null);
+      setRepostComment("");
+
+      // Refresh posts to show the new repost (it will appear in today's date)
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("linkedin_posts" as any)
+          .select(`
+            *,
+            images:linkedin_post_images(*)
+          `)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (!error) {
+          setPosts((data as any) || []);
+        }
+      }
+
+      await Swal.fire({
+        title: 'Opslag genopslået!',
+        text: 'Dit opslag er nu genopslået på LinkedIn og vil vises i kalenderen',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: false,
+        toast: true,
+        customClass: {
+          popup: 'swal2-toast-custom'
+        },
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error reposting:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved genopslag',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til false kun ved fejl
       setActionLoading(false);
     }
   };
@@ -771,13 +918,13 @@ export default function ContentPlanPage() {
         {/* Kalender grid */}
         <div className="grid grid-cols-7 gap-0 border border-gray-200 rounded-lg overflow-hidden">
           {calendarDays.map((day, index) => {
-            const visiblePosts = day.posts.slice(0, 3);
-            const hiddenPostsCount = day.posts.length - 3;
+            const visiblePosts = day.posts.slice(0, 2);
+            const hiddenPostsCount = day.posts.length - 2;
             
             return (
               <div
                 key={index}
-                className={`min-h-[120px] p-2 border-r border-b border-gray-200 last:border-r-0 ${
+                className={`h-[135px] p-2 border-r border-b border-gray-200 last:border-r-0 ${
                   index >= calendarDays.length - 7 ? 'border-b-0' : ''
                 } ${
                   day.isCurrentMonth ? 'bg-gray-50' : 'bg-gray-100'
@@ -793,37 +940,58 @@ export default function ContentPlanPage() {
                   {day.date.getDate()}
                 </div>
                 
-                <div className="space-y-1">
+                <div className="space-y-1 flex flex-col justify-start h-full pb-1">
                   {visiblePosts.map(post => (
                     <div
                       key={post.id}
-                      onClick={() => handlePostClick(post)}
+                      onClick={() => handleOpenPostModal(post)}
                       className="cursor-pointer group"
                     >
-                      <div className={`text-xs px-2 py-1 rounded text-white truncate ${getStatusColor(post.status)} group-hover:opacity-80`}>
-                        <div className="flex items-center gap-1">
-                          <div className="flex-shrink-0">
+                      <div className={`text-xs px-2 py-1 rounded text-white ${getStatusColor(post.status, post.is_repost)} group-hover:opacity-80`}>
+                        {/* Desktop visning */}
+                        <div className="hidden sm:flex items-center gap-1 w-full">
+                          <div className="flex-shrink-0 font-medium">
                             {formatPostDate(post)}
                           </div>
+                          <div className="truncate flex-1">
+                            {post.text.slice(0, 25)}...
+                          </div>
                           {post.images && post.images.length > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Image className="w-3 h-3 flex-shrink-0" />
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Image className="w-3 h-3" />
                               {post.images.length > 1 && (
                                 <span className="text-xs">×{post.images.length}</span>
                               )}
                             </div>
                           )}
                         </div>
-                        <div className="truncate mt-0.5">
-                          {post.text.slice(0, 30)}...
+                        
+                        {/* Mobil visning - kun klokkeslæt */}
+                        <div className="sm:hidden text-center font-medium">
+                          {formatPostDate(post)}
                         </div>
                       </div>
                     </div>
                   ))}
                   
-                  {hiddenPostsCount > 0 && (
-                    <div className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 transition-colors">
-                      +{hiddenPostsCount} flere
+                  {day.posts.length > 2 && (
+                    <div 
+                      onClick={() => {
+                        const dateStr = day.date.toLocaleDateString('da-DK', { 
+                          weekday: 'long', 
+                          day: 'numeric', 
+                          month: 'long' 
+                        });
+                        setSelectedDayPosts({
+                          date: dateStr,
+                          posts: day.posts
+                        });
+                        setShowDayPostsModal(true);
+                      }}
+                      className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300 transition-colors"
+                    >
+                      <span className="hidden sm:inline">+{hiddenPostsCount} flere</span>
+                      <span className="sm:hidden">+{hiddenPostsCount}</span>
                     </div>
                   )}
                 </div>
@@ -843,6 +1011,10 @@ export default function ContentPlanPage() {
             <span className="text-sm text-gray-600">Planlagt</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-purple-500"></div>
+            <span className="text-sm text-gray-600">Genopslag</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-red-500"></div>
             <span className="text-sm text-gray-600">Fejlet</span>
           </div>
@@ -853,8 +1025,12 @@ export default function ContentPlanPage() {
       {selectedPost && (
         <Modal 
           isOpen={showPostModal} 
-          onClose={() => setShowPostModal(false)}
-          title="Opslag detaljer"
+          onClose={() => {
+            setShowPostModal(false);
+            setSelectedPost(null);
+            setOriginalPost(null);
+          }}
+          title="LinkedIn Opslag"
           actions={[
             // Primary actions for scheduled posts
             ...(selectedPost.status === 'scheduled' ? [
@@ -871,8 +1047,8 @@ export default function ContentPlanPage() {
                 disabled: actionLoading
               }
             ] : []),
-            // Primary actions for draft posts
-            ...(selectedPost.status === 'draft' ? [
+            // Primary actions for draft and failed posts
+            ...(selectedPost.status === 'draft' || selectedPost.status === 'failed' ? [
               {
                 label: 'Udgiv nu',
                 onClick: () => handlePublishNow(selectedPost.id),
@@ -886,7 +1062,16 @@ export default function ContentPlanPage() {
                 disabled: actionLoading
               }
             ] : []),
-            // View on LinkedIn for published posts
+            // Genopslå for originale udgivne opslag
+            ...(selectedPost.status === 'published' && selectedPost.ugc_post_id && !selectedPost.is_repost ? [
+              {
+                label: 'Genopslå',
+                onClick: () => handleRepost(selectedPost),
+                icon: <Repeat2 className="w-4 h-4" />,
+                disabled: actionLoading
+              }
+            ] : []),
+            // Vis på LinkedIn for alle udgivne opslag
             ...(selectedPost.status === 'published' && selectedPost.ugc_post_id ? [
               {
                 label: 'Vis på LinkedIn',
@@ -923,100 +1108,193 @@ export default function ContentPlanPage() {
             }
           ]}
         >
-          <div className="space-y-6">
-            {/* Status badge */}
-            <div className="flex items-center gap-3">
-              <div className={`px-3 py-1 rounded-full text-white text-sm font-medium ${getStatusColor(selectedPost.status)}`}>
-                {getStatusText(selectedPost.status)}
+            <div className="space-y-6">
+              {/* Profile Header */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-lg">R</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Ruben Juncher</h4>
+                  <p className="text-sm text-gray-500">
+                    {selectedPost.status === 'scheduled' && selectedPost.scheduled_for
+                      ? `Planlagt: ${formatDate(selectedPost.scheduled_for)}`
+                      : selectedPost.published_at
+                      ? formatDate(selectedPost.published_at)
+                      : formatDate(selectedPost.created_at)
+                    } • 
+                    <span className="ml-1">🌍</span>
+                  </p>
+                </div>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getVisibilityStyle(selectedPost.visibility)}`}>
-                {getVisibilityText(selectedPost.visibility)}
-              </div>
-            </div>
 
-            {/* Timing info */}
-            <div className="bg-gray-100 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-gray-700 mb-2">
-                <Clock className="w-4 h-4" />
-                <span className="font-medium">
-                  {selectedPost.status === 'scheduled' ? 'Planlagt udgivelse:' : 'Udgivet:'}
-                </span>
-              </div>
-              <p className="text-gray-900">
-                {selectedPost.scheduled_for 
-                  ? new Date(selectedPost.scheduled_for).toLocaleString('da-DK', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
-                  : selectedPost.published_at
-                  ? new Date(selectedPost.published_at).toLocaleString('da-DK', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
-                  : 'Ukendt'
-                }
-              </p>
-            </div>
-
-            {/* Post content */}
-            <div>
-              <h4 className="font-medium text-gray-900 mb-3">Opslag indhold:</h4>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <p className="text-gray-900 whitespace-pre-wrap">{selectedPost.text}</p>
-                
-                {selectedPost.images && selectedPost.images.length > 0 && (
-                  <div className="mt-4">
-                    {selectedPost.images.length === 1 ? (
-                      // Enkelt billede - vis stort
-                      <img 
-                        src={selectedPost.images[0].image_url!} 
-                        alt="Opslag billede"
-                        className="max-w-full h-auto rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => openLightbox(selectedPost.images || [], 0)}
-                      />
-                    ) : (
-                      // Flere billeder - vis i grid
-                      <div>
-                        <p className="text-sm text-gray-600 mb-2">{selectedPost.images.length} billeder:</p>
-                        <div className={`grid gap-2 ${
-                          selectedPost.images.length === 2 ? 'grid-cols-2' :
-                          selectedPost.images.length === 3 ? 'grid-cols-3' :
-                          'grid-cols-2'
-                        }`}>
-                          {selectedPost.images.slice(0, 4).map((image, index) => (
-                            <div key={image.id} className="relative">
-                              <img 
-                                src={image.image_url!} 
-                                alt={`Opslag billede ${index + 1}`}
-                                className={`w-full object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity ${
-                                  (selectedPost.images?.length || 0) === 2 ? 'h-40' : 'h-32'
-                                }`}
-                                onClick={() => openLightbox(selectedPost.images || [], index)}
-                              />
-                              {/* Vis "+X" overlay hvis der er flere end 4 billeder og dette er det 4. */}
-                              {index === 3 && selectedPost.images!.length > 4 && (
-                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
-                                  <span className="text-white font-semibold text-sm">+{selectedPost.images!.length - 4}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+              {/* Genopslag struktur */}
+              {selectedPost.is_repost ? (
+                <div className="space-y-4">
+                  {/* Genopslags kommentar (hvis der er nogen) */}
+                  {selectedPost.text && !selectedPost.text.startsWith('Genopslag:') && (
+                    <div className="mb-4">
+                      <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                        {selectedPost.text}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Original post kort */}
+                  {originalPost && (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Repeat2 className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Genopslag af:</span>
+                      </div>
+                      
+                      {/* Original post header */}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">R</span>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-gray-900 text-sm">Ruben Juncher</h5>
+                          <p className="text-xs text-gray-500">
+                            {originalPost.published_at ? formatDate(originalPost.published_at) : formatDate(originalPost.created_at)}
+                          </p>
                         </div>
                       </div>
-                    )}
+                      
+                      {/* Original post content */}
+                      <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+                        {originalPost.text}
+                      </div>
+                      
+                      {/* Original post images */}
+                      {originalPost.images && originalPost.images.length > 0 && (
+                        <div className="mt-3">
+                          {originalPost.images.length === 1 ? (
+                            // Enkelt billede - vis større
+                            <div className="w-full">
+                              <img 
+                                src={originalPost.images[0].image_url!} 
+                                alt="Original opslag billede"
+                                className="w-full max-h-48 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => openLightbox(originalPost.images || [], 0)}
+                              />
+                            </div>
+                          ) : (
+                            // Flere billeder - vis i grid
+                            <div>
+                              <div className={`grid gap-2 ${
+                                originalPost.images.length === 2 ? 'grid-cols-2' :
+                                originalPost.images.length === 3 ? 'grid-cols-3' :
+                                'grid-cols-2'
+                              }`}>
+                                {originalPost.images.slice(0, 4).map((image, index) => (
+                                  <div key={image.id} className="relative">
+                                    <img 
+                                      src={image.image_url!} 
+                                      alt={`Original opslag billede ${index + 1}`}
+                                      className={`w-full object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity ${
+                                        originalPost.images!.length === 2 ? 'h-24' : 'h-20'
+                                      }`}
+                                      onClick={() => openLightbox(originalPost.images || [], index)}
+                                    />
+                                    {/* Vis "+X" overlay hvis der er flere end 4 billeder og dette er det 4. */}
+                                    {index === 3 && originalPost.images!.length > 4 && (
+                                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">+{originalPost.images!.length - 4}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Normal post content */
+                <div className="mb-4">
+                  <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                    {selectedPost.text}
+                  </p>
+                </div>
+              )}
+
+              {/* Images Display - kun for normale posts */}
+              {!selectedPost.is_repost && selectedPost.images && selectedPost.images.length > 0 && (
+                <div className="mb-4">
+                  {selectedPost.images.length === 1 ? (
+                    // Enkelt billede - vis stort
+                    <div>
+                      <img 
+                        src={selectedPost.images[0].image_url!} 
+                        alt="LinkedIn opslag billede"
+                        className="w-full rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                        style={{ maxHeight: '400px', objectFit: 'contain' }}
+                        onClick={() => openLightbox(selectedPost.images || [], 0)}
+                      />
+                    </div>
+                  ) : (
+                    // Flere billeder - vis i grid
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">{selectedPost.images.length} billeder:</p>
+                      <div className={`grid gap-2 ${
+                        selectedPost.images.length === 2 ? 'grid-cols-2' :
+                        selectedPost.images.length === 3 ? 'grid-cols-3' :
+                        'grid-cols-2'
+                      }`}>
+                        {selectedPost.images.slice(0, 4).map((image, index) => (
+                          <div key={image.id} className="relative">
+                            <img 
+                              src={image.image_url!} 
+                              alt={`LinkedIn opslag billede ${index + 1}`}
+                              className={`w-full object-cover rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity ${
+                                (selectedPost.images?.length || 0) === 2 ? 'h-40' : 'h-32'
+                              }`}
+                              onClick={() => openLightbox(selectedPost.images || [], index)}
+                            />
+                            {/* Vis "+X" overlay hvis der er flere end 4 billeder og dette er det 4. */}
+                            {index === 3 && selectedPost.images!.length > 4 && (
+                              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                                <span className="text-white font-semibold">+{selectedPost.images!.length - 4}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Post Meta Info */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedPost.status === 'scheduled'
+                        ? 'bg-blue-100 text-blue-800'
+                        : selectedPost.status === 'published'
+                        ? 'bg-green-100 text-green-800'
+                        : selectedPost.status === 'draft'
+                        ? 'bg-gray-200 text-gray-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedPost.status === 'scheduled' ? 'Planlagt' : selectedPost.status === 'published' ? 'Udgivet' : selectedPost.status === 'draft' ? 'Kladde' : 'Fejlet'}
+                    </span>
                   </div>
-                )}
+                  <div>
+                    <span className="text-gray-500">Visning:</span>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getVisibilityStyle(selectedPost.visibility)}`}>
+                      {getVisibilityText(selectedPost.visibility)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
         </Modal>
       )}
 
@@ -1136,6 +1414,139 @@ export default function ContentPlanPage() {
               >
                 Annuller
               </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Repost Modal */}
+      {selectedPost && (
+        <Modal 
+          isOpen={showRepostModal} 
+          onClose={() => {
+            setShowRepostModal(false);
+            setSelectedPost(null);
+            setRepostComment("");
+          }}
+          title="Genopslå på LinkedIn"
+        >
+          <div className="space-y-6">
+            {/* Original post preview */}
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="flex items-center gap-2 mb-3">
+                <Repeat2 className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600">Genopslår dette opslag:</span>
+              </div>
+              <div className="text-sm text-gray-900 line-clamp-3">
+                {selectedPost.text}
+              </div>
+              {selectedPost.images && selectedPost.images.length > 0 && (
+                <div className="mt-2 text-xs text-gray-500">
+                  📷 {selectedPost.images.length} billede{selectedPost.images.length > 1 ? 'r' : ''}
+                </div>
+              )}
+            </div>
+
+            {/* Commentary input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tilføj en kommentar (valgfrit)
+              </label>
+              <textarea
+                value={repostComment}
+                onChange={(e) => setRepostComment(e.target.value)}
+                placeholder="Skriv en kommentar til dit genopslag..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={4}
+                maxLength={3000}
+              />
+              <div className="mt-1 text-xs text-gray-500 text-right">
+                {repostComment.length}/3000 tegn
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                onClick={handleRepostSubmit}
+                disabled={actionLoading}
+                className="px-6"
+              >
+                {actionLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Genopslår...
+                  </div>
+                ) : (
+                  <>
+                    <Repeat2 className="w-4 h-4 mr-2" />
+                    Genopslå
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRepostModal(false);
+                  setSelectedPost(null);
+                  setRepostComment("");
+                }}
+                disabled={actionLoading}
+                className="px-6"
+              >
+                Annuller
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Day Posts Modal */}
+      {showDayPostsModal && (
+        <Modal
+          isOpen={showDayPostsModal}
+          onClose={() => setShowDayPostsModal(false)}
+          title={`Opslag for ${selectedDayPosts.date}`}
+        >
+          <div className="max-h-96 overflow-y-auto">
+            <div className="space-y-2">
+              {selectedDayPosts.posts.map(post => (
+                <div
+                  key={post.id}
+                  onClick={() => {
+                    setShowDayPostsModal(false);
+                    handleOpenPostModal(post);
+                  }}
+                  className="cursor-pointer group p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`px-2 py-1 rounded text-xs font-medium text-white ${getStatusColor(post.status, post.is_repost)}`}>
+                      {formatPostDate(post)}
+                    </div>
+                    <div className="flex-1 truncate">
+                      <div className="text-sm text-gray-900 truncate">
+                        {post.text.slice(0, 60)}...
+                      </div>
+                    </div>
+                    {post.images && post.images.length > 0 && (
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Image className="w-4 h-4" />
+                        {post.images.length > 1 && (
+                          <span className="text-xs">×{post.images.length}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                      post.status === 'published' ? 'bg-green-100 text-green-800' :
+                      post.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                      post.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {getStatusText(post.status)}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </Modal>

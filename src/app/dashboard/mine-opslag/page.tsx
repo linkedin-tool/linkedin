@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Lightbox } from "@/components/ui/lightbox";
-import { FileText, Calendar, PlusCircle, Eye, Search, Filter, MoreVertical, Clock, Send, Edit, Trash2, FileEdit } from "lucide-react";
+import { FileText, Calendar, PlusCircle, Eye, Search, Filter, MoreVertical, Clock, Send, Edit, Trash2, FileEdit, Repeat2 } from "lucide-react";
 import Link from "next/link";
 import Swal from 'sweetalert2';
 
@@ -19,6 +19,8 @@ interface LinkedInPost {
   scheduled_for: string | null;
   published_at: string | null;
   created_at: string;
+  is_repost?: boolean;
+  original_post_urn?: string | null;
   images?: Array<{
     id: string;
     image_url: string | null;
@@ -48,6 +50,10 @@ export default function MineOpslagPage() {
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<Array<{id: string, url: string, alt?: string}>>([]);
   const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
+  const [showRepostModal, setShowRepostModal] = useState(false);
+  const [repostPost, setRepostPost] = useState<LinkedInPost | null>(null);
+  const [repostComment, setRepostComment] = useState("");
+  const [originalPost, setOriginalPost] = useState<LinkedInPost | null>(null);
   const POSTS_PER_PAGE = 20;
   
   const supabase = createClient();
@@ -82,6 +88,24 @@ export default function MineOpslagPage() {
     return `https://www.linkedin.com/feed/update/urn:li:share:${shareId}`;
   };
 
+  // Få post titel til listevisning
+  const getPostTitle = (post: LinkedInPost): string => {
+    if (post.is_repost) {
+      // For genopslag: vis genopslags tekst hvis der er nogen, ellers "Genopslag: [original tekst]"
+      if (post.text && post.text.trim() && !post.text.startsWith('Genopslag:')) {
+        return post.text; // Vis genopslags kommentar
+      } else {
+        // Vis "Genopslag: [original tekst]" - ekstrahér original tekst fra post.text
+        const match = post.text.match(/Genopslag: "(.+?)"/);
+        if (match && match[1]) {
+          return `Genopslag: ${match[1]}`;
+        }
+        return post.text; // Fallback til fuld tekst
+      }
+    }
+    return post.text; // Normal post
+  };
+
   // Lightbox funktioner
   const openLightbox = (images: any[], initialIndex: number = 0) => {
     const lightboxImageData = images
@@ -101,6 +125,40 @@ export default function MineOpslagPage() {
     setShowLightbox(false);
     setLightboxImages([]);
     setLightboxInitialIndex(0);
+  };
+
+  // Hent original post for genopslag
+  const fetchOriginalPost = async (originalPostUrn: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: originalPostData, error } = await supabase
+        .from("linkedin_posts" as any)
+        .select(`
+          *,
+          images:linkedin_post_images(*)
+        `)
+        .eq("ugc_post_id", originalPostUrn)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!error && originalPostData) {
+        setOriginalPost(originalPostData as any);
+      }
+    } catch (err) {
+      console.error("Error fetching original post:", err);
+    }
+  };
+
+  // Åbn post modal og hent original post hvis det er et genopslag
+  const handleOpenPostModal = async (post: LinkedInPost) => {
+    setSelectedPost(post);
+    setOriginalPost(null); // Reset original post
+    
+    if (post.is_repost && post.original_post_urn) {
+      await fetchOriginalPost(post.original_post_urn);
+    }
   };
 
   const fetchAllPosts = async () => {
@@ -224,14 +282,6 @@ export default function MineOpslagPage() {
   };
 
 
-  const getPostTitle = (text: string) => {
-    const firstLine = text.split('\n')[0];
-    if (firstLine.length > 40) {
-      return firstLine.substring(0, 40) + "...";
-    }
-    return firstLine;
-  };
-
   const handlePublishNow = async (postId: string) => {
     try {
       setActionLoading(postId);
@@ -287,8 +337,8 @@ export default function MineOpslagPage() {
   const handleReschedule = (post: LinkedInPost) => {
     setShowActionMenu(null);
     
-    if (post.status === 'draft') {
-      // For kladder: brug schedule modal (ny planlægning)
+    if (post.status === 'draft' || post.status === 'failed') {
+      // For kladder og fejlede opslag: brug schedule modal (ny planlægning)
       setSchedulePost(post);
       // Default til i morgen kl. 10:00
       const tomorrow = new Date();
@@ -653,6 +703,82 @@ export default function MineOpslagPage() {
     }
   };
 
+  // Handle repost
+  const handleRepost = (post: LinkedInPost) => {
+    setRepostPost(post);
+    setRepostComment("");
+    setShowRepostModal(true);
+    setShowActionMenu(null);
+  };
+
+  // Handle repost submit
+  const handleRepostSubmit = async () => {
+    if (!repostPost || !repostPost.ugc_post_id) return;
+
+    setActionLoading(repostPost.id);
+
+    try {
+      const response = await fetch('/api/linkedin/repost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalPostUrn: repostPost.ugc_post_id,
+          commentary: repostComment.trim() || undefined,
+          visibility: repostPost.visibility
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fejl ved genopslag');
+      }
+
+      // Stop loading øjeblikkeligt efter success
+      setActionLoading(null);
+
+      // Luk modal og reset
+      setShowRepostModal(false);
+      setRepostPost(null);
+      setRepostComment("");
+
+      // Refresh posts list to show the new repost
+      await fetchAllPosts();
+
+      await Swal.fire({
+        title: 'Opslag genopslået!',
+        text: 'Dit opslag er nu genopslået på LinkedIn og tilføjet til dine opslag',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: false,
+        toast: true,
+        customClass: {
+          popup: 'swal2-toast-custom'
+        },
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+    } catch (error) {
+      console.error('Error reposting:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl ved genopslag',
+        text: error instanceof Error ? error.message : 'Noget gik galt. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+      // Sæt loading til null kun ved fejl
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-8 pt-16">
@@ -784,7 +910,7 @@ export default function MineOpslagPage() {
                 <Card 
                   key={post.id} 
                   className="group p-3 sm:p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
-                  onClick={() => setSelectedPost(post)}
+                  onClick={() => handleOpenPostModal(post)}
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
                     {/* Thumbnail */}
@@ -820,11 +946,18 @@ export default function MineOpslagPage() {
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical'
                               }}>
-                            {getPostTitle(post.text)}
+                            {getPostTitle(post)}
                           </h4>
                           
                           {/* Badges */}
                           <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                            {/* Repost badge */}
+                            {post.is_repost && (
+                              <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                <Repeat2 className="w-3 h-3 mr-1" />
+                                Genopslag
+                              </span>
+                            )}
                             <span className={`inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium ${
                               post.status === 'scheduled'
                                 ? 'bg-blue-100 text-blue-800'
@@ -913,8 +1046,8 @@ export default function MineOpslagPage() {
                                   </>
                                 )}
                                 
-                                {/* Ekstra muligheder for kladde opslag */}
-                                {post.status === 'draft' && (
+                                {/* Ekstra muligheder for kladde og fejlede opslag */}
+                                {(post.status === 'draft' || post.status === 'failed') && (
                                   <>
                                     <button
                                       onClick={(e) => {
@@ -942,7 +1075,25 @@ export default function MineOpslagPage() {
                                   </>
                                 )}
                                 
-                                {/* Vis på LinkedIn - kun for udgivne opslag med ugc_post_id */}
+                                {/* Genopslå mulighed for originale udgivne opslag */}
+                                {post.status === 'published' && post.ugc_post_id && !post.is_repost && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRepost(post);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                      disabled={actionLoading === post.id}
+                                    >
+                                      <Repeat2 className="w-4 h-4" />
+                                      Genopslå
+                                    </button>
+                                    <hr className="my-1 border-gray-100" />
+                                  </>
+                                )}
+
+                                {/* Vis på LinkedIn for alle udgivne opslag */}
                                 {post.status === 'published' && post.ugc_post_id && (
                                   <>
                                     <button
@@ -951,7 +1102,7 @@ export default function MineOpslagPage() {
                                         const linkedinUrl = convertUrnToLinkedInUrl(post.ugc_post_id!);
                                         window.open(linkedinUrl, '_blank');
                                       }}
-                                      className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                       disabled={actionLoading === post.id}
                                     >
                                       <Eye className="w-4 h-4" />
@@ -1053,8 +1204,8 @@ export default function MineOpslagPage() {
                 disabled: actionLoading === selectedPost.id,
               }
             ] : []),
-            // Primary actions for draft posts
-            ...(selectedPost.status === 'draft' ? [
+            // Primary actions for draft and failed posts
+            ...(selectedPost.status === 'draft' || selectedPost.status === 'failed' ? [
               {
                 label: 'Udgiv nu',
                 onClick: () => handlePublishNow(selectedPost.id),
@@ -1068,7 +1219,16 @@ export default function MineOpslagPage() {
                 disabled: actionLoading === selectedPost.id,
               }
             ] : []),
-            // View on LinkedIn for published posts
+            // Genopslå for originale udgivne opslag
+            ...(selectedPost.status === 'published' && selectedPost.ugc_post_id && !selectedPost.is_repost ? [
+              {
+                label: 'Genopslå',
+                onClick: () => handleRepost(selectedPost),
+                icon: <Repeat2 className="w-4 h-4" />,
+                disabled: actionLoading === selectedPost.id
+              }
+            ] : []),
+            // Vis på LinkedIn for alle udgivne opslag
             ...(selectedPost.status === 'published' && selectedPost.ugc_post_id ? [
               {
                 label: 'Vis på LinkedIn',
@@ -1125,15 +1285,102 @@ export default function MineOpslagPage() {
                 </div>
               </div>
 
-              {/* Post Content */}
-              <div className="mb-4">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
-                  {selectedPost.text}
-                </p>
-              </div>
+              {/* Genopslag struktur */}
+              {selectedPost.is_repost ? (
+                <div className="space-y-4">
+                  {/* Genopslags kommentar (hvis der er nogen) */}
+                  {selectedPost.text && !selectedPost.text.startsWith('Genopslag:') && (
+                    <div className="mb-4">
+                      <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                        {selectedPost.text}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Original post kort */}
+                  {originalPost && (
+                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Repeat2 className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">Genopslag af:</span>
+                      </div>
+                      
+                      {/* Original post header */}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">R</span>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-gray-900 text-sm">Ruben Juncher</h5>
+                          <p className="text-xs text-gray-500">
+                            {originalPost.published_at ? formatDate(originalPost.published_at) : formatDate(originalPost.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Original post content */}
+                      <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed mb-3">
+                        {originalPost.text}
+                      </div>
+                      
+                      {/* Original post images */}
+                      {originalPost.images && originalPost.images.length > 0 && (
+                        <div className="mt-3">
+                          {originalPost.images.length === 1 ? (
+                            // Enkelt billede - vis større
+                            <div className="w-full">
+                              <img 
+                                src={originalPost.images[0].image_url!} 
+                                alt="Original opslag billede"
+                                className="w-full max-h-48 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => openLightbox(originalPost.images || [], 0)}
+                              />
+                            </div>
+                          ) : (
+                            // Flere billeder - vis i grid
+                            <div>
+                              <div className={`grid gap-2 ${
+                                originalPost.images.length === 2 ? 'grid-cols-2' :
+                                originalPost.images.length === 3 ? 'grid-cols-3' :
+                                'grid-cols-2'
+                              }`}>
+                                {originalPost.images.slice(0, 4).map((image, index) => (
+                                  <div key={image.id} className="relative">
+                                    <img 
+                                      src={image.image_url!} 
+                                      alt={`Original opslag billede ${index + 1}`}
+                                      className={`w-full object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity ${
+                                        originalPost.images!.length === 2 ? 'h-24' : 'h-20'
+                                      }`}
+                                      onClick={() => openLightbox(originalPost.images || [], index)}
+                                    />
+                                    {/* Vis "+X" overlay hvis der er flere end 4 billeder og dette er det 4. */}
+                                    {index === 3 && originalPost.images!.length > 4 && (
+                                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">+{originalPost.images!.length - 4}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Normal post content */
+                <div className="mb-4">
+                  <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                    {selectedPost.text}
+                  </p>
+                </div>
+              )}
 
-              {/* Images Display */}
-              {selectedPost.images && selectedPost.images.length > 0 && (
+              {/* Images Display - kun for normale posts */}
+              {!selectedPost.is_repost && selectedPost.images && selectedPost.images.length > 0 && (
                 <div className="mb-4">
                   {selectedPost.images.length === 1 ? (
                     // Enkelt billede - vis stort
@@ -1179,36 +1426,6 @@ export default function MineOpslagPage() {
                 </div>
               )}
 
-              {/* LinkedIn-style Engagement Bar */}
-              <div className="border-t border-gray-200 pt-3 mt-4">
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                  <div className="flex items-center space-x-4">
-                    <span>👍 Se reaktioner på LinkedIn</span>
-                  </div>
-                  <span>Se kommentarer på LinkedIn</span>
-                </div>
-                
-                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                  <div className="flex items-center space-x-6">
-                    <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                      <span>👍</span>
-                      <span className="text-sm font-medium">Synes godt om</span>
-                    </button>
-                    <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                      <span>💬</span>
-                      <span className="text-sm font-medium">Kommentér</span>
-                    </button>
-                    <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                      <span>🔄</span>
-                      <span className="text-sm font-medium">Del</span>
-                    </button>
-                    <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
-                      <span>📤</span>
-                      <span className="text-sm font-medium">Send</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
 
               {/* Post Meta Info */}
               <div className="mt-6 pt-4 border-t border-gray-200">
@@ -1233,19 +1450,6 @@ export default function MineOpslagPage() {
                       {getVisibilityText(selectedPost.visibility)}
                     </span>
                   </div>
-                  {selectedPost.ugc_post_id && (
-                    <div>
-                      <span className="text-gray-500">LinkedIn ID:</span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedPost.ugc_post_id!);
-                        }}
-                        className="ml-2 text-blue-600 hover:underline text-xs"
-                      >
-                        {selectedPost.ugc_post_id}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1368,6 +1572,88 @@ export default function MineOpslagPage() {
                   setNewScheduledTime("");
                 }}
                 disabled={actionLoading === schedulePost.id}
+                className="px-6"
+              >
+                Annuller
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Repost Modal */}
+      {repostPost && (
+        <Modal 
+          isOpen={showRepostModal} 
+          onClose={() => {
+            setShowRepostModal(false);
+            setRepostPost(null);
+            setRepostComment("");
+          }}
+          title="Genopslå på LinkedIn"
+        >
+          <div className="space-y-6">
+            {/* Original post preview */}
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="flex items-center gap-2 mb-3">
+                <Repeat2 className="w-4 h-4 text-gray-500" />
+                <span className="text-sm text-gray-600">Genopslår dette opslag:</span>
+              </div>
+              <div className="text-sm text-gray-900 line-clamp-3">
+                {repostPost.text}
+              </div>
+              {repostPost.images && repostPost.images.length > 0 && (
+                <div className="mt-2 text-xs text-gray-500">
+                  📷 {repostPost.images.length} billede{repostPost.images.length > 1 ? 'r' : ''}
+                </div>
+              )}
+            </div>
+
+            {/* Commentary input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tilføj en kommentar (valgfrit)
+              </label>
+              <textarea
+                value={repostComment}
+                onChange={(e) => setRepostComment(e.target.value)}
+                placeholder="Skriv en kommentar til dit genopslag..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={4}
+                maxLength={3000}
+              />
+              <div className="mt-1 text-xs text-gray-500 text-right">
+                {repostComment.length}/3000 tegn
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                onClick={handleRepostSubmit}
+                disabled={actionLoading === repostPost.id}
+                className="px-6"
+              >
+                {actionLoading === repostPost.id ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Genopslår...
+                  </div>
+                ) : (
+                  <>
+                    <Repeat2 className="w-4 h-4 mr-2" />
+                    Genopslå
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRepostModal(false);
+                  setRepostPost(null);
+                  setRepostComment("");
+                }}
+                disabled={actionLoading === repostPost.id}
                 className="px-6"
               >
                 Annuller

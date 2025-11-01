@@ -252,7 +252,24 @@ npm run dev  # Starter på port 3000 (eller næste tilgængelige)
   - Automatisk sletning af tilknyttede billeder (CASCADE)
   - Tilgængelig i både Mine Opslag dropdown og Content Plan modal
   - Øjeblikkelig opdatering af UI efter sletning
-- ✅ **📝 NYEST: Fixed Draft Edit Status Bug**
+- ✅ **📝 NYEST: Optimized Calendar Layout**
+  - **Maximum 2 visible posts**: Kalender viser maksimalt 2 opslag per dag for konsistens
+  - **Fixed row heights**: Alle kalender rækker har præcis samme højde (110px)
+  - **Optimal spacing**: Plads til 2 opslag + "+X flere" knap i hver celle
+  - **"+X flere" threshold**: Vises kun når der er mere end 2 opslag (ikke 3)
+  - **Consistent visual hierarchy**: Perfekt balance mellem indhold og whitespace
+  - **Professional appearance**: Ensartet grid layout som moderne kalendersystemer
+  - **Realistic usage**: Optimeret for typisk posting frekvens (1-2 posts per dag)
+  - **Clean design**: Eliminerer variable række højder for bedre visuel ro
+- ✅ **📝 FORRIGE: Failed Posts Recovery Options**
+  - **Problem**: Opslag med status "fejlet" havde ingen recovery muligheder
+  - **Solution**: Fejlede opslag får samme valgmuligheder som kladder
+  - **Recovery options**: "Udgiv nu", "Planlæg opslag", "Rediger opslag", "Slet opslag"
+  - **Consistent UX**: Samme funktionalitet på tværs af Mine Opslag og Content Plan
+  - **Smart scheduling**: Fejlede opslag bruger schedule modal (ny planlægning) i stedet for reschedule
+  - **Status transitions**: Fejlede opslag kan ændres til 'scheduled' eller 'published' via update-post API
+  - **User empowerment**: Brugere kan nu nemt håndtere tekniske fejl og API problemer
+- ✅ **📝 FORRIGE: Fixed Draft Edit Status Bug**
   - **Problem**: "Gem ændringer" på kladder forsøgte at udgive til LinkedIn i stedet for at gemme som kladde
   - **Root cause**: Default `publishType` var "now", så `editPostStatus === 'draft' && publishType !== 'draft'` var altid true
   - **Solution**: Ændret `publishType` til optional parameter og opdateret logik
