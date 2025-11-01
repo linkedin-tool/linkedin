@@ -781,7 +781,7 @@ export default function MineOpslagPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8 pt-16">
+      <div className="space-y-8">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Mine Opslag</h1>
           <p className="text-lg text-gray-600">Se alle dine LinkedIn opslag udgivet via platformen.</p>
@@ -797,7 +797,7 @@ export default function MineOpslagPage() {
   }
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Mine Opslag</h1>
         <p className="text-lg text-gray-600">Se alle dine LinkedIn opslag udgivet via platformen.</p>

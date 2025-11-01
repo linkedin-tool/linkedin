@@ -74,7 +74,8 @@ export async function GET(req: NextRequest) {
     if (!user) throw new Error("Not authenticated in app");
 
     console.log("Saving LinkedIn profile to database...");
-    // upsert profil
+    // upsert profil - opdater både created_at og updated_at ved fornyelse
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("linkedin_profiles" as any)
       .upsert({
@@ -86,7 +87,8 @@ export async function GET(req: NextRequest) {
         access_token_expires_at: accessTokenExpiresAt.toISOString(),
         refresh_token: refreshToken,
         refresh_token_expires_at: refreshTokenExpiresAt?.toISOString() ?? null,
-        updated_at: new Date().toISOString()
+        created_at: now,  // Opdater created_at til fornyelsesdato
+        updated_at: now
       }, { onConflict: "user_id" });
     if (error) throw error;
 

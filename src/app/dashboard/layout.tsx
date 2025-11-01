@@ -20,6 +20,7 @@ import {
   Activity
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
+import { LinkedInNotificationBanner } from '@/components/LinkedInNotificationBanner'
 
 interface UserProfile {
   id: string
@@ -122,18 +123,13 @@ export default function DashboardLayout({
     )
   }
 
-  const baseNavigation = [
+  // Main functional pages
+  const mainNavigation = [
     { 
       name: 'Overblik', 
       href: '/dashboard', 
       icon: LayoutDashboard,
       current: pathname === '/dashboard' 
-    },
-    { 
-      name: 'Integration', 
-      href: '/dashboard/integration', 
-      icon: LinkIcon,
-      current: pathname === '/dashboard/integration' 
     },
     { 
       name: 'Nyt Opslag', 
@@ -153,6 +149,26 @@ export default function DashboardLayout({
       icon: FileText,
       current: pathname === '/dashboard/mine-opslag' 
     },
+  ]
+
+  // Admin-only Queue item
+  const queueNavigation = userProfile?.is_admin 
+    ? [{ 
+        name: 'Queue', 
+        href: '/dashboard/queue', 
+        icon: Activity,
+        current: pathname === '/dashboard/queue' 
+      }]
+    : []
+
+  // Settings pages
+  const settingsNavigation = [
+    { 
+      name: 'Integration', 
+      href: '/dashboard/integration', 
+      icon: LinkIcon,
+      current: pathname === '/dashboard/integration' 
+    },
     { 
       name: 'Indstillinger', 
       href: '/dashboard/settings', 
@@ -161,19 +177,11 @@ export default function DashboardLayout({
     },
   ]
 
-  // Add Queue navigation item only for admins
-  const navigation = userProfile?.is_admin 
-    ? [
-        ...baseNavigation.slice(0, 5), // Insert before Settings
-        { 
-          name: 'Queue', 
-          href: '/dashboard/queue', 
-          icon: Activity,
-          current: pathname === '/dashboard/queue' 
-        },
-        baseNavigation[5] // Settings
-      ]
-    : baseNavigation
+  // Combine all navigation with divider structure
+  const navigation = {
+    main: [...mainNavigation, ...queueNavigation],
+    settings: settingsNavigation
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -206,7 +214,33 @@ export default function DashboardLayout({
 
         {/* Navigation Menu */}
         <nav className="flex-1 px-4 py-6 space-y-1">
-          {navigation.map((item) => {
+          {/* Main functional pages */}
+          {navigation.main.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`group flex items-center pl-6 pr-3 py-3 text-base font-medium rounded-full transition-colors ${
+                  item.current
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                <Icon className={`flex-shrink-0 w-5 h-5 mr-3 ${
+                  item.current ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'
+                }`} />
+                {item.name}
+              </Link>
+            )
+          })}
+          
+          {/* Divider */}
+          <div className="my-4 border-t border-gray-700"></div>
+          
+          {/* Settings pages */}
+          {navigation.settings.map((item) => {
             const Icon = item.icon
             return (
               <Link
@@ -243,8 +277,11 @@ export default function DashboardLayout({
 
       {/* Right Content Column - Remaining Width */}
       <div className="flex-1 bg-gray-50 flex flex-col lg:ml-0 overflow-hidden">
+        {/* LinkedIn Notification Banner */}
+        <LinkedInNotificationBanner />
+        
         {/* Top Header with User Dropdown - Fixed */}
-        <div className="bg-white shadow-sm border-b border-gray-200 h-16 px-4 lg:px-8 flex items-center justify-between fixed top-0 right-0 left-0 lg:left-[230px] z-40">
+        <div className="bg-white shadow-sm border-b border-gray-200 h-16 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(true)}

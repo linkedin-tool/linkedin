@@ -244,7 +244,7 @@ function DashboardContent() {
   }
   
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       {/* Welcome message for Pro users */}
       {showWelcome && (
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">

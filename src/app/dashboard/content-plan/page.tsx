@@ -855,7 +855,7 @@ export default function ContentPlanPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8 pt-16">
+      <div className="space-y-8">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Content Plan</h1>
           <p className="text-lg text-gray-600">Indlæser din content kalender...</p>
@@ -865,7 +865,7 @@ export default function ContentPlanPage() {
   }
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Content Plan</h1>
         <p className="text-lg text-gray-600">Få overblik over dine planlagte og udgivne LinkedIn-opslag.</p>

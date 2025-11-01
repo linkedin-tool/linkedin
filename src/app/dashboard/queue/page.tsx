@@ -298,7 +298,7 @@ export default function QueuePage() {
   // Show loading while checking admin status
   if (authLoading) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center pt-16">
+      <div className="flex-1 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Kontrollerer adgang...</p>
@@ -310,7 +310,7 @@ export default function QueuePage() {
   // Show access denied if not admin
   if (isAdmin === false) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center pt-16">
+      <div className="flex-1 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Adgang Nægtet</h2>
@@ -322,7 +322,7 @@ export default function QueuePage() {
   }
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         {/* Header */}
         <div className="mb-8">

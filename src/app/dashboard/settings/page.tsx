@@ -275,7 +275,7 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Indstillinger</h1>
         <p className="text-lg text-gray-600">Administrer dine kontooplysninger og abonnement</p>

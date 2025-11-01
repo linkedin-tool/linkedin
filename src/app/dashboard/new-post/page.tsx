@@ -368,7 +368,7 @@ export default function NewPostPage() {
   };
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
           {isEditMode ? 'Rediger Opslag' : 'Nyt Opslag'}

@@ -22,6 +22,7 @@ export default function IntegrationPage() {
   const err = sp.get("linkedin_error");
   const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRenewal, setIsRenewal] = useState(false);
   
   const supabase = createClient();
 
@@ -34,14 +35,22 @@ export default function IntegrationPage() {
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from("linkedin_profiles" as any)
           .select("*")
           .eq("user_id", user.id)
           .single();
 
-        if (profile) {
-          setLinkedInProfile(profile as any);
+        if (profile && !error) {
+          const profileData = profile as any;
+          setLinkedInProfile(profileData);
+          
+          // Check if this is a renewal (connection exists and just connected)
+          if (justConnected && profileData) {
+            const connectionAge = Date.now() - new Date(profileData.created_at).getTime();
+            const isOldConnection = connectionAge > 5 * 60 * 1000; // More than 5 minutes old
+            setIsRenewal(isOldConnection);
+          }
         }
       } catch (error) {
         console.error("Error checking LinkedIn connection:", error);
@@ -60,7 +69,7 @@ export default function IntegrationPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8 pt-16">
+      <div className="space-y-8">
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration</h1>
           <p className="text-lg text-gray-600">Forbind din LinkedIn-konto for at kunne udgive opslag fra dit dashboard.</p>
@@ -76,7 +85,7 @@ export default function IntegrationPage() {
   }
 
   return (
-    <div className="space-y-8 pt-16">
+    <div className="space-y-8">
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration</h1>
         <p className="text-lg text-gray-600">Forbind din LinkedIn-konto for at kunne udgive opslag fra dit dashboard.</p>
@@ -91,8 +100,15 @@ export default function IntegrationPage() {
                 <CheckCircle className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">LinkedIn forbundet! 🎉</h3>
-                <p className="text-gray-700 mt-1">Din LinkedIn-konto er nu forbundet og klar til brug.</p>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {isRenewal ? 'LinkedIn adgang fornyet! 🔄' : 'LinkedIn forbundet! 🎉'}
+                </h3>
+                <p className="text-gray-700 mt-1">
+                  {isRenewal 
+                    ? 'Din LinkedIn-adgang er blevet fornyet og er nu gyldig i 60 dage mere.'
+                    : 'Din LinkedIn-konto er nu forbundet og klar til brug.'
+                  }
+                </p>
               </div>
             </div>
           </Card>
@@ -115,33 +131,38 @@ export default function IntegrationPage() {
         {/* Connection Status Card */}
         {isConnected && (
           <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center space-x-4">
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
                     <LinkIcon className="w-6 h-6 text-white" />
                   </div>
-                  {/* Green dot indicator */}
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                  {/* Status dot indicator */}
+                  <div className={`absolute -top-1 -right-1 w-4 h-4 ${isTokenValid ? 'bg-green-500' : 'bg-red-500'} rounded-full border-2 border-white`}></div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    LinkedIn Connected
-                    <span className="text-sm font-normal text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                      {isTokenValid ? "Active" : "Token Expired"}
-                    </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {isTokenValid ? "LinkedIn Forbundet" : "LinkedIn Adgang Udløbet"}
                   </h3>
                   <p className="text-gray-700 mt-1">
                     Forbundet den {linkedInProfile ? new Date(linkedInProfile.created_at).toLocaleDateString('da-DK') : ''}
                   </p>
+                  {linkedInProfile && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {isTokenValid 
+                        ? `Adgang udløber den ${new Date(linkedInProfile.access_token_expires_at).toLocaleDateString('da-DK')} kl. ${new Date(linkedInProfile.access_token_expires_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`
+                        : `Adgang udløb den ${new Date(linkedInProfile.access_token_expires_at).toLocaleDateString('da-DK')} kl. ${new Date(linkedInProfile.access_token_expires_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`
+                      }
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right flex-shrink-0">
                 <p className="text-sm text-gray-600">Status</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${isTokenValid ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                <div className="flex items-center sm:justify-end gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${isTokenValid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   <span className="text-sm font-medium text-gray-900">
-                    {isTokenValid ? 'Online' : 'Needs Refresh'}
+                    {isTokenValid ? 'Online' : 'Kræver Fornyelse'}
                   </span>
                 </div>
               </div>
@@ -149,15 +170,45 @@ export default function IntegrationPage() {
           </Card>
         )}
 
-        {/* Main Integration Card */}
-        <Card className="p-8 bg-white border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <LinkIcon className="h-6 w-6 text-blue-600" />
-            <h3 className="text-xl font-semibold text-gray-900">LinkedIn Integration</h3>
-          </div>
-          
-          <div className="space-y-6">
-            {!isConnected ? (
+        {/* Token Renewal Card - Show when connected */}
+        {isConnected && (
+          <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <LinkIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900">Forny LinkedIn Adgang</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {isTokenValid 
+                      ? "Din adgang er aktiv. Du kan forny den når som helst for at forlænge gyldighedsperioden."
+                      : "Din adgang er udløbet. Forny din forbindelse for at fortsætte med at udgive opslag."
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 sm:ml-4">
+                <Button asChild className="px-6 h-10 bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                  <a href="/api/linkedin/auth">
+                    <LinkIcon className="w-4 h-4 mr-2" />
+                    Forny Adgang
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Main Integration Card - Only show when not connected OR when connected and token is valid */}
+        {(!isConnected || (isConnected && isTokenValid)) && (
+          <Card className="p-8 bg-white border border-gray-200 shadow-sm flex flex-col gap-2">
+            <div className="flex items-center gap-2 mb-0">
+              <LinkIcon className="h-6 w-6 text-blue-600" />
+              <h3 className="text-xl font-semibold text-gray-900">LinkedIn Integration</h3>
+            </div>
+            <div className="space-y-2">
+              {!isConnected ? (
               <>
                 <div>
                   <p className="text-base text-gray-600 mb-4">
@@ -187,46 +238,67 @@ export default function IntegrationPage() {
               </>
             ) : (
               <>
-                <div>
-                  <p className="text-base text-gray-600 mb-4">
-                    Din LinkedIn-konto er forbundet og klar til brug! Du kan nu udgive opslag direkte fra dit dashboard.
-                  </p>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                    <h4 className="text-base font-medium text-green-900 mb-2">Du har nu adgang til:</h4>
-                    <ul className="text-sm text-green-800 space-y-1">
-                      <li>✅ Udgiv tekst-opslag på LinkedIn</li>
-                      <li>✅ Upload og del billeder</li>
-                      <li>✅ Administrer dine posts fra ét sted</li>
-                      <li>✅ Sikker OAuth 2.0 forbindelse</li>
-                    </ul>
-                  </div>
-                </div>
+                {isTokenValid ? (
+                  <>
+                    <div>
+                      <p className="text-base text-gray-600 mb-4">
+                        Din LinkedIn-konto er forbundet og klar til brug! Du kan nu udgive opslag direkte fra dit dashboard.
+                      </p>
+                      
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <h4 className="text-base font-medium text-green-900 mb-2">Du har nu adgang til:</h4>
+                        <ul className="text-sm text-green-800 space-y-1">
+                          <li>✅ Udgiv tekst-opslag på LinkedIn</li>
+                          <li>✅ Upload og del billeder</li>
+                          <li>✅ Administrer dine posts fra ét sted</li>
+                          <li>✅ Sikker OAuth 2.0 forbindelse</li>
+                        </ul>
+                      </div>
+                    </div>
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button asChild className="px-8 h-11 bg-blue-600 hover:bg-blue-700">
-                    <Link href="/dashboard/new-post">
-                      <ArrowRight className="w-4 h-4" />
-                      Opret Nyt Opslag
-                    </Link>
-                  </Button>
-                  
-                  {!isTokenValid && (
-                    <Button asChild variant="outline" className="px-8 h-11">
-                      <a href="/api/linkedin/auth">
-                        <LinkIcon className="w-4 h-4" />
-                        Genopfrisk Forbindelse
-                      </a>
-                    </Button>
-                  )}
-                </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button asChild className="px-8 h-11 bg-blue-600 hover:bg-blue-700">
+                        <Link href="/dashboard/new-post">
+                          <ArrowRight className="w-4 h-4" />
+                          Opret Nyt Opslag
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-base text-gray-600 mb-4">
+                        Din LinkedIn-adgang er udløbet. Forny din forbindelse for at fortsætte med at udgive opslag.
+                      </p>
+                      
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <h4 className="text-base font-medium text-red-900 mb-2">For at fortsætte skal du:</h4>
+                        <ul className="text-sm text-red-800 space-y-1">
+                          <li>🔄 Forny din LinkedIn adgang</li>
+                          <li>✅ Få adgang til alle funktioner igen</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button asChild className="px-8 h-11 bg-red-600 hover:bg-red-700">
+                        <a href="/api/linkedin/auth">
+                          <LinkIcon className="w-4 h-4" />
+                          Forny Adgang
+                        </a>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
         </Card>
+        )}
 
         {/* Quick Actions */}
-        {isConnected && (
+        {isConnected && isTokenValid && (
           <div className="mt-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Hurtige handlinger</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
