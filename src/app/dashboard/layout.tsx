@@ -37,6 +37,7 @@ interface UserProfile {
   trial_end?: string | null
   subscription_created_at?: string | null
   subscription_canceled_at?: string | null
+  is_admin?: boolean | null
 }
 
 export default function DashboardLayout({
@@ -121,7 +122,7 @@ export default function DashboardLayout({
     )
   }
 
-  const navigation = [
+  const baseNavigation = [
     { 
       name: 'Overblik', 
       href: '/dashboard', 
@@ -153,18 +154,26 @@ export default function DashboardLayout({
       current: pathname === '/dashboard/mine-opslag' 
     },
     { 
-      name: 'Queue', 
-      href: '/dashboard/queue', 
-      icon: Activity,
-      current: pathname === '/dashboard/queue' 
-    },
-    { 
       name: 'Indstillinger', 
       href: '/dashboard/settings', 
       icon: Settings,
       current: pathname === '/dashboard/settings' 
     },
   ]
+
+  // Add Queue navigation item only for admins
+  const navigation = userProfile?.is_admin 
+    ? [
+        ...baseNavigation.slice(0, 5), // Insert before Settings
+        { 
+          name: 'Queue', 
+          href: '/dashboard/queue', 
+          icon: Activity,
+          current: pathname === '/dashboard/queue' 
+        },
+        baseNavigation[5] // Settings
+      ]
+    : baseNavigation
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { 
   Activity,
@@ -53,6 +55,10 @@ interface DailyKpis {
 
 export default function QueuePage() {
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
   const [stats, setStats] = useState<QueueStats>({
     totalRuns: 0,
     successfulRuns: 0,
@@ -76,6 +82,50 @@ export default function QueuePage() {
     time_label: string;
   }>>([])
   const [autoRefresh, setAutoRefresh] = useState(true)
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        // Fetch user profile to check admin status
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
+
+        if (profileData) {
+          setIsAdmin(profileData.is_admin || false)
+          
+          // If not admin, redirect to dashboard
+          if (!profileData.is_admin) {
+            router.push('/dashboard')
+            return
+          }
+        } else {
+          // If no profile found, assume not admin
+          setIsAdmin(false)
+          router.push('/dashboard')
+          return
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        setIsAdmin(false)
+        router.push('/dashboard')
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAdminStatus()
+  }, [supabase, router])
 
   const fetchQueueData = async () => {
     try {
@@ -142,20 +192,23 @@ export default function QueuePage() {
   }
 
   useEffect(() => {
-    fetchQueueData()
+    // Only fetch data if user is confirmed admin
+    if (isAdmin === true && !authLoading) {
+      fetchQueueData()
 
-    // Auto-refresh every 30 seconds if enabled
-    let interval: NodeJS.Timeout | null = null
-    if (autoRefresh) {
-      interval = setInterval(() => {
-        fetchQueueData()
-      }, 30000) // 30 seconds
-    }
+      // Auto-refresh every 30 seconds if enabled
+      let interval: NodeJS.Timeout | null = null
+      if (autoRefresh) {
+        interval = setInterval(() => {
+          fetchQueueData()
+        }, 30000) // 30 seconds
+      }
 
-    return () => {
-      if (interval) clearInterval(interval)
+      return () => {
+        if (interval) clearInterval(interval)
+      }
     }
-  }, [autoRefresh])
+  }, [autoRefresh, isAdmin, authLoading])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -240,6 +293,32 @@ export default function QueuePage() {
       minute: '2-digit',
       timeZone: 'Europe/Copenhagen'
     }).format(date)
+  }
+
+  // Show loading while checking admin status
+  if (authLoading) {
+    return (
+      <div className="flex-1 bg-gray-50 flex items-center justify-center pt-16">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Kontrollerer adgang...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show access denied if not admin
+  if (isAdmin === false) {
+    return (
+      <div className="flex-1 bg-gray-50 flex items-center justify-center pt-16">
+        <div className="text-center">
+          <XCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Adgang Nægtet</h2>
+          <p className="text-gray-600 mb-4">Du har ikke tilladelse til at tilgå denne side.</p>
+          <p className="text-sm text-gray-500">Kun administratorer kan se queue status.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
