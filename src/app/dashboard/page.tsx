@@ -66,7 +66,7 @@ function DashboardContent() {
   
   const supabase = createClient()
 
-  // Standardiserede styling funktioner
+  // Standardiserede styling funktioner.
   const getVisibilityStyle = (visibility: string) => {
     switch (visibility) {
       case 'PUBLIC':
