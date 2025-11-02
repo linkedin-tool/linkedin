@@ -16,6 +16,7 @@ import {
   Lightbulb,
   Type
 } from 'lucide-react'
+import VoiceRecorder from '@/components/VoiceRecorder'
 
 interface AITrainingData {
   personal_background?: string
@@ -244,26 +245,39 @@ export default function TrainAIPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-base flex items-center gap-2`}
-              >
-                {Icon && <Icon className="h-4 w-4" />}
-                {tab.label}
-              </button>
-            )
-          })}
-        </nav>
+      <div className="border-b border-gray-200 relative">
+        {/* Left fade indicator */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none sm:hidden"></div>
+        
+        {/* Right fade indicator */}
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none sm:hidden"></div>
+        
+        <div className="overflow-x-auto scrollbar-hide">
+          <nav className="-mb-px flex space-x-8 min-w-max px-4 sm:px-0" aria-label="Tabs">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-base flex items-center gap-2 flex-shrink-0`}
+                >
+                  {Icon && <Icon className="h-4 w-4" />}
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+        
+        {/* Scroll hint text - only visible on mobile */}
+        <div className="sm:hidden text-center py-1">
+          <span className="text-xs text-gray-400">← Swipe for flere indstillinger →</span>
+        </div>
       </div>
 
       <div className="max-w-4xl">
@@ -278,9 +292,35 @@ export default function TrainAIPage() {
               
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="background" className="block text-base font-medium text-gray-700 mb-2">
-                    Fortæl kort om dig selv og din baggrund
-                  </label>
+                  <div className="mb-2">
+                    {/* Mobile layout - vertical stacking */}
+                    <div className="sm:hidden">
+                      <label htmlFor="background" className="block text-base font-medium text-gray-700 mb-2">
+                        Fortæl kort om dig selv og din baggrund
+                      </label>
+                      <div className="flex justify-end mb-2">
+                        <VoiceRecorder 
+                          onTranscription={(text) => setTrainingData(prev => ({ 
+                            ...prev, 
+                            personal_background: text 
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Desktop layout - side by side */}
+                    <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                      <label htmlFor="background" className="block text-base font-medium text-gray-700">
+                        Fortæl kort om dig selv og din baggrund
+                      </label>
+                      <VoiceRecorder 
+                        onTranscription={(text) => setTrainingData(prev => ({ 
+                          ...prev, 
+                          personal_background: text 
+                        }))}
+                      />
+                    </div>
+                  </div>
                   <textarea
                     id="background"
                     rows={6}
@@ -295,9 +335,35 @@ export default function TrainAIPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="offering" className="block text-base font-medium text-gray-700 mb-2">
-                    Hvad tilbyder du? Hvordan hjælper du din målgruppe?
-                  </label>
+                  <div className="mb-2">
+                    {/* Mobile layout - vertical stacking */}
+                    <div className="sm:hidden">
+                      <label htmlFor="offering" className="block text-base font-medium text-gray-700 mb-2">
+                        Hvad tilbyder du? Hvordan hjælper du din målgruppe?
+                      </label>
+                      <div className="flex justify-end mb-2">
+                        <VoiceRecorder 
+                          onTranscription={(text) => setTrainingData(prev => ({ 
+                            ...prev, 
+                            service_offering: text 
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Desktop layout - side by side */}
+                    <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                      <label htmlFor="offering" className="block text-base font-medium text-gray-700">
+                        Hvad tilbyder du? Hvordan hjælper du din målgruppe?
+                      </label>
+                      <VoiceRecorder 
+                        onTranscription={(text) => setTrainingData(prev => ({ 
+                          ...prev, 
+                          service_offering: text 
+                        }))}
+                      />
+                    </div>
+                  </div>
                   <textarea
                     id="offering"
                     rows={4}
@@ -412,9 +478,35 @@ export default function TrainAIPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="writing-style" className="block text-base font-medium text-gray-700 mb-2">
-                    Beskriv din skrivestil med egne ord
-                  </label>
+                  <div className="mb-2">
+                    {/* Mobile layout - vertical stacking */}
+                    <div className="sm:hidden">
+                      <label htmlFor="writing-style" className="block text-base font-medium text-gray-700 mb-2">
+                        Beskriv din skrivestil med egne ord
+                      </label>
+                      <div className="flex justify-end mb-2">
+                        <VoiceRecorder 
+                          onTranscription={(text) => setTrainingData(prev => ({ 
+                            ...prev, 
+                            writing_style: text 
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Desktop layout - side by side */}
+                    <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                      <label htmlFor="writing-style" className="block text-base font-medium text-gray-700">
+                        Beskriv din skrivestil med egne ord
+                      </label>
+                      <VoiceRecorder 
+                        onTranscription={(text) => setTrainingData(prev => ({ 
+                          ...prev, 
+                          writing_style: text 
+                        }))}
+                      />
+                    </div>
+                  </div>
                   <textarea
                     id="writing-style"
                     rows={4}
@@ -440,9 +532,35 @@ export default function TrainAIPage() {
               
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="target-audience" className="block text-base font-medium text-gray-700 mb-2">
-                    Hvem henvender dine opslag sig til?
-                  </label>
+                  <div className="mb-2">
+                    {/* Mobile layout - vertical stacking */}
+                    <div className="sm:hidden">
+                      <label htmlFor="target-audience" className="block text-base font-medium text-gray-700 mb-2">
+                        Hvem henvender dine opslag sig til?
+                      </label>
+                      <div className="flex justify-end mb-2">
+                        <VoiceRecorder 
+                          onTranscription={(text) => setTrainingData(prev => ({ 
+                            ...prev, 
+                            target_audience: text 
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Desktop layout - side by side */}
+                    <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                      <label htmlFor="target-audience" className="block text-base font-medium text-gray-700">
+                        Hvem henvender dine opslag sig til?
+                      </label>
+                      <VoiceRecorder 
+                        onTranscription={(text) => setTrainingData(prev => ({ 
+                          ...prev, 
+                          target_audience: text 
+                        }))}
+                      />
+                    </div>
+                  </div>
                   <textarea
                     id="target-audience"
                     rows={4}
@@ -454,9 +572,35 @@ export default function TrainAIPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="goals" className="block text-base font-medium text-gray-700 mb-2">
-                    Hvad vil du gerne have, at dine opslag opnår?
-                  </label>
+                  <div className="mb-2">
+                    {/* Mobile layout - vertical stacking */}
+                    <div className="sm:hidden">
+                      <label htmlFor="goals" className="block text-base font-medium text-gray-700 mb-2">
+                        Hvad vil du gerne have, at dine opslag opnår?
+                      </label>
+                      <div className="flex justify-end mb-2">
+                        <VoiceRecorder 
+                          onTranscription={(text) => setTrainingData(prev => ({ 
+                            ...prev, 
+                            goals: text 
+                          }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Desktop layout - side by side */}
+                    <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                      <label htmlFor="goals" className="block text-base font-medium text-gray-700">
+                        Hvad vil du gerne have, at dine opslag opnår?
+                      </label>
+                      <VoiceRecorder 
+                        onTranscription={(text) => setTrainingData(prev => ({ 
+                          ...prev, 
+                          goals: text 
+                        }))}
+                      />
+                    </div>
+                  </div>
                   <textarea
                     id="goals"
                     rows={4}
