@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_training_inputs: {
+        Row: {
+          content_preferences: string[] | null
+          created_at: string | null
+          emoji_policy: string | null
+          favorite_words: string | null
+          forbidden_words: string | null
+          formality_level: number | null
+          goals: string | null
+          hashtag_policy: string | null
+          id: string
+          personal_background: string | null
+          previous_posts: string | null
+          service_offering: string | null
+          target_audience: string | null
+          tone_of_voice: string[] | null
+          updated_at: string | null
+          user_id: string
+          writing_style: string | null
+        }
+        Insert: {
+          content_preferences?: string[] | null
+          created_at?: string | null
+          emoji_policy?: string | null
+          favorite_words?: string | null
+          forbidden_words?: string | null
+          formality_level?: number | null
+          goals?: string | null
+          hashtag_policy?: string | null
+          id?: string
+          personal_background?: string | null
+          previous_posts?: string | null
+          service_offering?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          writing_style?: string | null
+        }
+        Update: {
+          content_preferences?: string[] | null
+          created_at?: string | null
+          emoji_policy?: string | null
+          favorite_words?: string | null
+          forbidden_words?: string | null
+          formality_level?: number | null
+          goals?: string | null
+          hashtag_policy?: string | null
+          id?: string
+          personal_background?: string | null
+          previous_posts?: string | null
+          service_offering?: string | null
+          target_audience?: string | null
+          tone_of_voice?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          writing_style?: string | null
+        }
+        Relationships: []
+      }
       cron_job_runs: {
         Row: {
           completed_at: string | null

@@ -13,17 +13,22 @@ import {
   FileText, 
   Upload,
   CheckCircle,
-  Lightbulb
+  Lightbulb,
+  Type
 } from 'lucide-react'
 
 interface AITrainingData {
   personal_background?: string
   tone_of_voice?: string[]
   formality_level?: number
+  emoji_policy?: string
+  hashtag_policy?: string
   target_audience?: string
   service_offering?: string
   content_preferences?: string[]
   writing_style?: string
+  favorite_words?: string
+  forbidden_words?: string
   previous_posts?: string
   goals?: string
 }
@@ -39,10 +44,14 @@ export default function TrainAIPage() {
     personal_background: '',
     tone_of_voice: [],
     formality_level: 3,
+    emoji_policy: 'Få',
+    hashtag_policy: '0',
     target_audience: '',
     service_offering: '',
     content_preferences: [],
     writing_style: '',
+    favorite_words: '',
+    forbidden_words: '',
     previous_posts: '',
     goals: ''
   })
@@ -52,7 +61,7 @@ export default function TrainAIPage() {
   useEffect(() => {
     // Check for tab parameter in URL
     const tabParam = searchParams?.get('tab')
-    if (tabParam && ['personal', 'tone', 'audience', 'content', 'examples'].includes(tabParam)) {
+    if (tabParam && ['personal', 'tone', 'audience', 'content', 'words', 'examples'].includes(tabParam)) {
       setActiveTab(tabParam)
     }
   }, [searchParams])
@@ -61,10 +70,35 @@ export default function TrainAIPage() {
     const fetchUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       
-      if (!user) return
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
-      // TODO: Fetch existing AI training data from database when we create the table
-      // For now, we'll use local state
+      // Fetch existing AI training data from database
+      const { data: existingTraining } = await supabase
+        .from('ai_training_inputs')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (existingTraining) {
+        setTrainingData({
+          personal_background: existingTraining.personal_background || '',
+          tone_of_voice: existingTraining.tone_of_voice || [],
+          formality_level: existingTraining.formality_level || 3,
+          emoji_policy: existingTraining.emoji_policy || 'Få',
+          hashtag_policy: existingTraining.hashtag_policy || '0',
+          target_audience: existingTraining.target_audience || '',
+          service_offering: existingTraining.service_offering || '',
+          content_preferences: existingTraining.content_preferences || [],
+          writing_style: existingTraining.writing_style || '',
+          favorite_words: existingTraining.favorite_words || '',
+          forbidden_words: existingTraining.forbidden_words || '',
+          previous_posts: existingTraining.previous_posts || '',
+          goals: existingTraining.goals || ''
+        })
+      }
 
       setLoading(false)
     }
@@ -75,16 +109,72 @@ export default function TrainAIPage() {
   const handleSave = async () => {
     setSaving(true)
 
-    // TODO: Save to database when we create the ai_training table
-    // For now, we'll just simulate saving
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-    
-    setShowSuccess(true)
-    setSaving(false)
-    
-    // Hide success message after 3 seconds
-    setTimeout(() => setShowSuccess(false), 3000)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setSaving(false)
+        return
+      }
+
+      // Check if user already has training data
+      const { data: existingTraining } = await supabase
+        .from('ai_training_inputs')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      const trainingPayload = {
+        user_id: user.id,
+        personal_background: trainingData.personal_background,
+        tone_of_voice: trainingData.tone_of_voice,
+        formality_level: trainingData.formality_level,
+        emoji_policy: trainingData.emoji_policy,
+        hashtag_policy: trainingData.hashtag_policy,
+        target_audience: trainingData.target_audience,
+        service_offering: trainingData.service_offering,
+        content_preferences: trainingData.content_preferences,
+        writing_style: trainingData.writing_style,
+        favorite_words: trainingData.favorite_words,
+        forbidden_words: trainingData.forbidden_words,
+        previous_posts: trainingData.previous_posts,
+        goals: trainingData.goals
+      }
+
+      if (existingTraining) {
+        // Update existing record
+        const { error } = await supabase
+          .from('ai_training_inputs')
+          .update(trainingPayload)
+          .eq('user_id', user.id)
+
+        if (error) {
+          console.error('Error updating AI training data:', error)
+          setSaving(false)
+          return
+        }
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('ai_training_inputs')
+          .insert([trainingPayload])
+
+        if (error) {
+          console.error('Error saving AI training data:', error)
+          setSaving(false)
+          return
+        }
+      }
+
+      setShowSuccess(true)
+      setSaving(false)
+      
+      // Hide success message after 2 seconds
+      setTimeout(() => setShowSuccess(false), 2000)
+    } catch (error) {
+      console.error('Error in handleSave:', error)
+      setSaving(false)
+    }
   }
 
   const handleToneToggle = (tone: string) => {
@@ -129,6 +219,7 @@ export default function TrainAIPage() {
     { id: 'tone', label: 'Tone of Voice', icon: MessageSquare },
     { id: 'audience', label: 'Målgruppe', icon: Target },
     { id: 'content', label: 'Indhold', icon: FileText },
+    { id: 'words', label: 'Ordvalg', icon: Type },
     { id: 'examples', label: 'Eksempler', icon: Upload },
   ]
 
@@ -144,25 +235,6 @@ export default function TrainAIPage() {
 
   return (
     <div className="space-y-8">
-      {/* Success Message */}
-      {showSuccess && (
-        <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Fedt! Vi går nu i gang med at træne din AI
-              </h3>
-              <p className="text-gray-700 mt-1">
-                Din AI lærer nu din skrivestil og bliver knivskarp på at ramme din tone of voice. 
-                Jo mere information du giver, desto bedre bliver den til at skrive som dig.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
 
       <div>
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Træn din AI</h1>
@@ -215,9 +287,9 @@ export default function TrainAIPage() {
                     value={trainingData.personal_background || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, personal_background: e.target.value }))}
                     placeholder="Fx: Jeg er salgschef med 10 års erfaring inden for B2B software. Jeg hjælper virksomheder med at optimere deres salgsprocesser og øge konverteringsraten..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-500 mt-1">
                     Beskriv din rolle, erfaring og hvad du specialiserer dig i
                   </p>
                 </div>
@@ -232,7 +304,7 @@ export default function TrainAIPage() {
                     value={trainingData.service_offering || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, service_offering: e.target.value }))}
                     placeholder="Fx: Jeg hjælper selvstændige konsulenter med at skabe flere kvalificerede leads via LinkedIn gennem strategisk content marketing og personlig branding..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -249,7 +321,7 @@ export default function TrainAIPage() {
                 <h3 className="text-xl font-semibold text-gray-900">Tone of Voice</h3>
               </div>
               
-              <div className="space-y-8">
+              <div className="space-y-12">
                 <div>
                   <label className="block text-base font-medium text-gray-700 mb-4">
                     Hvordan vil du beskrive din skrivestil? (Vælg 2-3 der passer bedst)
@@ -284,9 +356,57 @@ export default function TrainAIPage() {
                       onChange={(e) => setTrainingData(prev => ({ ...prev, formality_level: parseInt(e.target.value) }))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <div className="flex justify-between text-sm font-medium text-gray-700 mt-2">
                       <span>Afslappet</span>
                       <span>Corporate</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-4">
+                      Emojis
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['Ingen', 'Få', 'Frit'].map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => setTrainingData(prev => ({ ...prev, emoji_policy: option }))}
+                          className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                            trainingData.emoji_policy === option
+                              ? 'bg-blue-100 border-blue-300 text-blue-800'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-base font-medium text-gray-700 mb-4">
+                      Hashtags
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: '0', label: 'Ingen' },
+                        { value: 'maks 1', label: 'maks 1' },
+                        { value: 'maks 3', label: 'maks 3' }
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setTrainingData(prev => ({ ...prev, hashtag_policy: option.value }))}
+                          className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                            trainingData.hashtag_policy === option.value
+                              ? 'bg-blue-100 border-blue-300 text-blue-800'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -301,7 +421,7 @@ export default function TrainAIPage() {
                     value={trainingData.writing_style || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, writing_style: e.target.value }))}
                     placeholder="Fx: Jeg skriver direkte og til sagen, men med et personligt touch. Jeg bruger ofte konkrete eksempler og undgår for meget jargon..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -329,7 +449,7 @@ export default function TrainAIPage() {
                     value={trainingData.target_audience || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, target_audience: e.target.value }))}
                     placeholder="Fx: Rekrutteringsledere i tech-virksomheder, selvstændige konsulenter, startup founders, HR-direktører i mellemstore virksomheder..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
                 </div>
 
@@ -343,7 +463,7 @@ export default function TrainAIPage() {
                     value={trainingData.goals || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, goals: e.target.value }))}
                     placeholder="Fx: Flere leads til min konsulentvirksomhed, styrke min personlige branding, skabe dialog og engagement, inspirere andre i branchen..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-gray-900 placeholder-gray-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -399,6 +519,66 @@ export default function TrainAIPage() {
           </div>
         )}
 
+        {/* Word Choice Tab */}
+        {activeTab === 'words' && (
+          <div className="space-y-8">
+            <Card className="p-8 bg-white border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <Type className="h-6 w-6 text-blue-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Ordvalg</h3>
+              </div>
+              
+              <div className="space-y-8">
+                <div>
+                  <label htmlFor="favorite-words" className="block text-base font-medium text-gray-700 mb-2">
+                    Favoritord
+                  </label>
+                  <textarea
+                    id="favorite-words"
+                    rows={4}
+                    value={trainingData.favorite_words || ''}
+                    onChange={(e) => setTrainingData(prev => ({ ...prev, favorite_words: e.target.value }))}
+                    placeholder="Fx: innovativ, bæredygtig, effektiv, strategisk, løsningsorienteret, kundefokuseret"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ord der kendetegner din stil og som du er glad for at bruge. Skriv enten et ord per linje eller komma-separeret
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="forbidden-words" className="block text-base font-medium text-gray-700 mb-2">
+                    Forbudte ord
+                  </label>
+                  <textarea
+                    id="forbidden-words"
+                    rows={4}
+                    value={trainingData.forbidden_words || ''}
+                    onChange={(e) => setTrainingData(prev => ({ ...prev, forbidden_words: e.target.value }))}
+                    placeholder="Fx: revolutionerende, game-changer, disruptiv, viral, hack, buzzword"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ord der ikke må bruges i dine opslag. Skriv enten et ord per linje eller komma-separeret
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-blue-900 mb-2">Tip til ordvalg</h4>
+                      <p className="text-blue-800 text-sm">
+                        Favoritord hjælper AI&apos;en med at bruge dit foretrukne ordforråd, mens forbudte ord sikrer at overbrugte buzzwords undgås. Dette giver dine opslag en mere autentisk og personlig tone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Examples Tab */}
         {activeTab === 'examples' && (
           <div className="space-y-8">
@@ -418,7 +598,7 @@ export default function TrainAIPage() {
                     rows={12}
                     value={trainingData.previous_posts || ''}
                     onChange={(e) => setTrainingData(prev => ({ ...prev, previous_posts: e.target.value }))}
-                    placeholder="Kopier og indsæt dine bedste LinkedIn opslag her. Adskil hvert opslag med en linje med '---'
+                    placeholder={`Kopier og indsæt dine bedste LinkedIn opslag her. Adskil hvert opslag med en linje med '---'
 
 Eksempel:
 
@@ -430,20 +610,20 @@ Jeg lærte noget vigtigt i dag om kundeservice...
 Har du nogensinde oplevet at...
 [Dit andet opslag]
 
----"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none font-mono text-sm text-gray-900 placeholder-gray-500"
+---`}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-300 resize-none text-base text-gray-900 placeholder-gray-500"
                   />
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-500 mt-1">
                     Jo flere eksempler du giver, desto bedre bliver AI&apos;en til at efterligne din stil
                   </p>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <div className="flex items-start gap-3">
-                    <Brain className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <Brain className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-yellow-900 mb-2">Sådan bruges dine eksempler</h4>
-                      <p className="text-yellow-800 text-sm">
+                      <h4 className="font-medium text-blue-900 mb-2">Sådan bruges dine eksempler</h4>
+                      <p className="text-blue-800 text-sm">
                         AI&apos;en analyserer dine opslag for at lære din tone, struktur, ordvalg og emner. 
                         Vælg opslag der repræsenterer din bedste skrivestil og som har fået god engagement.
                       </p>
@@ -456,13 +636,21 @@ Har du nogensinde oplevet at...
         )}
 
         {/* Save Button */}
-        <div className="flex justify-end pt-6 border-t border-gray-200">
+        <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+          <div className="flex items-center space-x-3">
+            {showSuccess && (
+              <div className="flex items-center space-x-2 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">AI opdateret med dine præferencer</span>
+              </div>
+            )}
+          </div>
           <Button 
             onClick={handleSave}
             disabled={saving}
             className="px-8 h-11 bg-blue-600 hover:bg-blue-700"
           >
-            {saving ? 'Gemmer træning...' : 'Gem AI træning'}
+            {saving ? 'Opdaterer AI...' : 'Gem AI træning'}
           </Button>
         </div>
       </div>
