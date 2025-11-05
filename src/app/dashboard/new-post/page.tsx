@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
 
@@ -30,6 +30,17 @@ export default function NewPostPage() {
   const [hooks, setHooks] = useState<string[]>([]);
   const [activeHookIndex, setActiveHookIndex] = useState(0);
   const [generatingHooks, setGeneratingHooks] = useState(false);
+  
+  // Posts generation states
+  const [generatingPosts, setGeneratingPosts] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showPostsModal, setShowPostsModal] = useState(false);
+  const [generatedPosts, setGeneratedPosts] = useState<Array<{id: number, angle: string, title: string, content: string, hooks?: string[]}>>([]);
+  const [activePostTab, setActivePostTab] = useState(0);
+  const [activePostHookIndex, setActivePostHookIndex] = useState<{[key: number]: number}>({});
+  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [completedPosts, setCompletedPosts] = useState<Set<string>>(new Set());
+  const [completedHooks, setCompletedHooks] = useState<Set<string>>(new Set());
 
   // Funktion til at få den korrekte return URL
   const getReturnUrl = () => {
@@ -227,6 +238,214 @@ export default function NewPostPage() {
       return hooks[activeHookIndex] + '\n\n' + text;
     }
     return text;
+  };
+
+  // Navigation mellem posts hooks
+  const navigatePostHook = (direction: 'prev' | 'next') => {
+    const currentPost = generatedPosts[activePostTab];
+    if (!currentPost?.hooks || currentPost.hooks.length === 0) return;
+    
+    const currentIndex = activePostHookIndex[activePostTab] || 0;
+    let newIndex;
+    
+    if (direction === 'prev') {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : currentPost.hooks.length - 1;
+    } else {
+      newIndex = currentIndex < currentPost.hooks.length - 1 ? currentIndex + 1 : 0;
+    }
+    
+    setActivePostHookIndex(prev => ({
+      ...prev,
+      [activePostTab]: newIndex
+    }));
+  };
+
+  // Generer 3 LinkedIn opslag baseret på textarea tekst
+  const generateLinkedInPosts = async () => {
+    if (!text.trim()) {
+      Swal.fire({
+        title: '📝 Ingen tekst',
+        text: 'Skriv dit opslag først, så kan jeg generere 3 versioner til dig.',
+        icon: undefined,
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'rounded-xl',
+          title: 'text-lg font-semibold text-gray-900',
+          htmlContainer: 'text-gray-700',
+          confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium'
+        },
+        buttonsStyling: false
+      });
+      return;
+    }
+    
+    // Vis progress modal
+    setShowProgressModal(true);
+    setGeneratingPosts(true);
+    setProgressPercentage(0);
+    setCompletedPosts(new Set());
+    setCompletedHooks(new Set());
+    setGeneratedPosts([]);
+    
+    try {
+      // Start progress animation
+      const progressInterval = setInterval(() => {
+        setProgressPercentage(prev => {
+          const newProgress = prev + 8;
+          return newProgress >= 85 ? 85 : newProgress;
+        });
+      }, 1000);
+
+      // Create 3 parallel API calls
+      const angles: Array<{id: number, angle: 'jordnær' | 'professionel' | 'storytelling'}> = [
+        {id: 1, angle: 'jordnær'},
+        {id: 2, angle: 'professionel'}, 
+        {id: 3, angle: 'storytelling'}
+      ];
+      
+      const shouldGenerateHooks = hooks.length === 0; // Kun generer hooks hvis ingen eksisterer
+
+      const postPromises = angles.map(async ({id, angle}) => {
+        try {
+          console.log(`🚀 Starting post generation for ${angle} (ID: ${id})`);
+          
+          // Generate the post
+          const response = await fetch('/api/generate-single-post', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: text,
+              type: 'text',
+              angle: angle
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to generate ${angle} post`);
+          }
+
+          const result = await response.json();
+          const post = {...result.post, id};
+          
+          console.log(`✅ Post ${id} (${angle}) generated`);
+          
+          // Update completed posts
+          setCompletedPosts(prev => new Set([...prev, angle]));
+          
+          // Generate hooks if needed
+          if (shouldGenerateHooks) {
+            try {
+              const hookResponse = await fetch('/api/generate-hook', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  content: post.content,
+                  angle: angle
+                }),
+              });
+
+              if (hookResponse.ok) {
+                const hookResult = await hookResponse.json();
+                post.hooks = hookResult.hooks || [];
+                console.log(`🪝 ${post.hooks.length} Hooks generated for post ${id} (${angle})`);
+              } else {
+                console.warn(`Failed to generate hooks for ${angle}`);
+                post.hooks = [];
+              }
+            } catch (hookError) {
+              console.error(`Error generating hooks for ${angle}:`, hookError);
+              post.hooks = [];
+            }
+            
+            // Update completed hooks
+            setCompletedHooks(prev => new Set([...prev, angle]));
+          }
+          
+          return post;
+        } catch (error) {
+          console.error(`Error generating ${angle} post:`, error);
+          throw error;
+        }
+      });
+
+      // Wait for all posts to complete
+      const posts = await Promise.all(postPromises);
+      posts.sort((a, b) => a.id - b.id);
+      
+      clearInterval(progressInterval);
+      setProgressPercentage(100);
+      
+      setTimeout(() => {
+        setGeneratedPosts(posts);
+        setActivePostTab(0);
+        setActivePostHookIndex({});
+        setShowProgressModal(false);
+        setShowPostsModal(true);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error generating posts:', error);
+      setShowProgressModal(false);
+      Swal.fire({
+        title: '❌ Fejl',
+        text: 'Der skete en fejl ved generering af opslag. Prøv igen.',
+        icon: undefined,
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'rounded-xl',
+          title: 'text-lg font-semibold text-gray-900',
+          htmlContainer: 'text-gray-700',
+          confirmButton: 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium'
+        },
+        buttonsStyling: false
+      });
+    } finally {
+      setGeneratingPosts(false);
+    }
+  };
+
+  // Håndter valg af opslag version (erstatter tekst på samme side)
+  const handleSelectPostVersion = () => {
+    const selectedPost = generatedPosts[activePostTab];
+    if (!selectedPost) return;
+    
+    // Erstatter tekst i textarea
+    setText(selectedPost.content);
+    
+    // Hvis der blev genereret hooks og der ikke var hooks i forvejen
+    if (selectedPost.hooks && selectedPost.hooks.length > 0 && hooks.length === 0) {
+      setHooks(selectedPost.hooks);
+      // Husk den valgte hook index fra modalen
+      const selectedHookIndex = activePostHookIndex[activePostTab] || 0;
+      setActiveHookIndex(selectedHookIndex);
+    }
+    
+    // Luk modal og reset states
+    setShowPostsModal(false);
+    setGeneratedPosts([]);
+    setActivePostTab(0);
+    setActivePostHookIndex({});
+    setProgressPercentage(0);
+    setCompletedPosts(new Set());
+    setCompletedHooks(new Set());
+    
+    Swal.fire({
+      title: '✅ Opslag valgt!',
+      text: 'Den valgte opslagsversion er nu indsat i tekstfeltet.',
+      icon: undefined,
+      confirmButtonText: 'Fedt!',
+      customClass: {
+        popup: 'rounded-xl',
+        title: 'text-lg font-semibold text-gray-900',
+        htmlContainer: 'text-gray-700',
+        confirmButton: 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium'
+      },
+      buttonsStyling: false
+    });
   };
 
   async function onSubmit(e: React.FormEvent, publishType?: "now" | "schedule" | "draft") {
@@ -691,9 +910,20 @@ export default function NewPostPage() {
                 required
                 disabled={isSubmitting}
               />
-              <p className="text-sm text-gray-500 mt-2">
-                Tip: Brug hashtags og tag relevante personer for at øge rækkevidden.
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-sm text-gray-500">
+                  Tip: Brug hashtags og tag relevante personer for at øge rækkevidden.
+                </p>
+                <button
+                  type="button"
+                  onClick={generateLinkedInPosts}
+                  disabled={generatingPosts || !text.trim()}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {generatingPosts ? 'Genererer...' : 'Generer 3 opslag'}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -960,6 +1190,150 @@ export default function NewPostPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Progress Modal */}
+      <Modal 
+        isOpen={showProgressModal} 
+        onClose={() => {}} 
+        className="max-w-md"
+        title="Genererer 3 opslag"
+        showCreatedDate={false}
+      >
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-8 h-8 text-blue-600 animate-pulse" />
+            </div>
+            <p className="text-gray-600 text-sm mb-4">
+              AI&apos;en arbejder på at skabe 3 fængende opslag med forskellige vinkler baseret på din tekst.
+            </p>
+          </div>
+          
+          <div className="mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+              <div 
+                className="bg-blue-600 h-3 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600">{progressPercentage}% færdig</p>
+          </div>
+
+          <div className="space-y-2 text-left">
+            {['jordnær', 'professionel', 'storytelling'].map((angle) => (
+              <div key={angle} className="flex items-center justify-between text-sm">
+                <span className="capitalize text-gray-700">{angle} vinkel:</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    completedPosts.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    Opslag {completedPosts.has(angle) ? '✓' : '...'}
+                  </span>
+                  {hooks.length === 0 && (
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      completedHooks.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      Hook {completedHooks.has(angle) ? '✓' : '...'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Posts Modal */}
+      <Modal 
+        isOpen={showPostsModal} 
+        onClose={() => {
+          setShowPostsModal(false);
+          setGeneratedPosts([]);
+          setActivePostTab(0);
+          setActivePostHookIndex({});
+          setProgressPercentage(0);
+          setCompletedPosts(new Set());
+          setCompletedHooks(new Set());
+        }}
+        className="max-w-3xl h-[70vh]"
+        title="3 Genererede LinkedIn Opslag"
+        showCreatedDate={false}
+      >
+        {generatedPosts.length > 0 && (
+          <div className="flex flex-col h-full">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 -mx-6 px-6">
+                {generatedPosts.map((post, index) => (
+                  <button
+                    key={post.id}
+                    onClick={() => setActivePostTab(index)}
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activePostTab === index
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {post.angle === 'jordnær' ? 'Jordnær' : 
+                     post.angle === 'professionel' ? 'Professionel' : 'Storytelling'}
+                  </button>
+                ))}
+              </div>
+
+            {/* Content */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex-1 min-h-0 overflow-hidden flex flex-col mt-6 -mx-6 mx-0">
+                <div className="flex-1 overflow-y-auto pr-2 min-h-[200px]">
+                  <div className="prose prose-sm max-w-none">
+                    {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
+                      <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-blue-600 font-medium">
+                              Hook variant {(activePostHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => navigatePostHook('prev')}
+                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                              >
+                                <ChevronLeft className="w-3 h-3 text-blue-600" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigatePostHook('next')}
+                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                              >
+                                <ChevronRight className="w-3 h-3 text-blue-600" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                          {generatedPosts[activePostTab].hooks![(activePostHookIndex[activePostTab] || 0)]}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                      {generatedPosts[activePostTab].content}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleSelectPostVersion}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Vælg denne version
+                  </button>
+                </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

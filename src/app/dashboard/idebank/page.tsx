@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { Lightbulb, Calendar, PlusCircle, Search, Filter, MoreVertical, Edit, Trash2, Mic, Type, Image as ImageIcon, Check, X, BookmarkPlus, Eye, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lightbulb, Calendar, PlusCircle, Search, Filter, MoreVertical, Edit, Trash2, Mic, Type, Image as ImageIcon, Check, X, BookmarkPlus, Eye, Info, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Swal from 'sweetalert2';
 
@@ -1950,189 +1950,146 @@ export default function IdebankPage() {
       )}
 
       {/* Progress Modal */}
-      {showProgressModal && (
-        <Modal 
-          isOpen={showProgressModal} 
-          onClose={() => {
-            setShowProgressModal(false);
-            setGeneratingPosts(false);
-            setProgressPercentage(0);
-            setCompletedPosts(new Set());
-            setCompletedHooks(new Set());
-          }}
-          title="Genererer 3 opslag"
-          showCreatedDate={false}
-        >
-          <div className="text-center py-8">
+      <Modal 
+        isOpen={showProgressModal} 
+        onClose={() => {}} 
+        className="max-w-md"
+        title="Genererer 3 opslag"
+        showCreatedDate={false}
+      >
+        <div className="text-center">
+          <div className="mb-4">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <Sparkles className="w-8 h-8 text-blue-600 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Genererer LinkedIn opslag</h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 text-sm mb-4">
               AI&apos;en arbejder på at skabe 3 fængende opslag med forskellige vinkler baseret på din idé.
             </p>
-            
-            {/* Progress Bar */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                <span>Progress</span>
-                <span>{progressPercentage}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-1000 ease-out" 
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Status for each post */}
-            <div className="space-y-3">
-              {['jordnær', 'professionel', 'storytelling'].map((angle) => {
-                const postCompleted = completedPosts.has(angle);
-                const hookCompleted = completedHooks.has(angle);
-                const fullyCompleted = postCompleted && hookCompleted;
-                
-                return (
-                  <div key={angle} className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          fullyCompleted 
-                            ? 'bg-green-500' 
-                            : 'bg-gray-300 animate-pulse'
-                        }`}></div>
-                        <span className="text-sm font-medium text-gray-900 capitalize">
-                          {angle === 'jordnær' ? 'Jordnær' : angle === 'professionel' ? 'Professionel' : 'Storytelling'} vinkel
-                        </span>
-                      </div>
-                      <span className={`text-xs ${
-                        fullyCompleted 
-                          ? 'text-green-600 font-medium' 
-                          : 'text-gray-500'
-                      }`}>
-                        {fullyCompleted ? '✓ Færdig' : 'Arbejder...'}
-                      </span>
-                    </div>
-                    
-                    {/* Sub-status for post and hook */}
-                    <div className="ml-6 space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">Opslag</span>
-                        <span className={postCompleted ? 'text-green-600' : 'text-gray-400'}>
-                          {postCompleted ? '✓' : '○'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">Hook</span>
-                        <span className={hookCompleted ? 'text-green-600' : 'text-gray-400'}>
-                          {hookCompleted ? '✓' : '○'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
-        </Modal>
-      )}
+          
+          <div className="mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+              <div 
+                className="bg-blue-600 h-3 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600">{progressPercentage}% færdig</p>
+          </div>
+
+          <div className="space-y-2 text-left">
+            {['jordnær', 'professionel', 'storytelling'].map((angle) => (
+              <div key={angle} className="flex items-center justify-between text-sm">
+                <span className="capitalize text-gray-700">{angle} vinkel:</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    completedPosts.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    Opslag {completedPosts.has(angle) ? '✓' : '...'}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    completedHooks.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    Hook {completedHooks.has(angle) ? '✓' : '...'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
 
       {/* Generated Posts Modal */}
-      {showPostsModal && generatedPosts.length > 0 && (
-        <Modal 
-          isOpen={showPostsModal} 
-          onClose={() => {
-            setShowPostsModal(false);
-            setGeneratedPosts([]);
-            setActivePostTab(0);
-      setActiveHookIndex({});
-            setProgressPercentage(0);
-            setCompletedPosts(new Set());
-          }}
-          title="3 Genererede LinkedIn Opslag"
-          showCreatedDate={false}
-          className="max-w-3xl h-[70vh]" // Fast højde på modal
-        >
+      <Modal 
+        isOpen={showPostsModal} 
+        onClose={() => {
+          setShowPostsModal(false);
+          setGeneratedPosts([]);
+          setActivePostTab(0);
+          setActiveHookIndex({});
+          setProgressPercentage(0);
+          setCompletedPosts(new Set());
+          setCompletedHooks(new Set());
+        }}
+        className="max-w-3xl h-[70vh]"
+        title="3 Genererede LinkedIn Opslag"
+        showCreatedDate={false}
+      >
+        {generatedPosts.length > 0 && (
           <div className="flex flex-col h-full">
             {/* Tabs */}
-            <div className="flex items-center justify-center mb-6 flex-shrink-0">
-              <div className="flex bg-gray-100 rounded-lg p-1">
+            <div className="flex border-b border-gray-200 -mx-6 px-6">
                 {generatedPosts.map((post, index) => (
                   <button
-                    key={index}
+                    key={post.id}
                     onClick={() => setActivePostTab(index)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activePostTab === index
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    {post.title}
+                    {post.angle === 'jordnær' ? 'Jordnær' : 
+                     post.angle === 'professionel' ? 'Professionel' : 'Storytelling'}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Active Post Content */}
-            {generatedPosts[activePostTab] && (
-              <div className="flex flex-col flex-1 min-h-0">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
-                  <div className="flex-1 overflow-y-auto pr-2 min-h-[200px]">
-                    <div className="prose prose-sm max-w-none">
-                      {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
-                        <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-blue-600 font-medium">
-                                Hook variant {(activeHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
-                              </span>
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => navigateHook('prev')}
-                                  className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                                  disabled={generatedPosts[activePostTab].hooks!.length <= 1}
-                                >
-                                  <ChevronLeft className="w-3 h-3 text-blue-600" />
-                                </button>
-                                <button
-                                  onClick={() => navigateHook('next')}
-                                  className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                                  disabled={generatedPosts[activePostTab].hooks!.length <= 1}
-                                >
-                                  <ChevronRight className="w-3 h-3 text-blue-600" />
-                                </button>
-                              </div>
+            {/* Content */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex-1 min-h-0 overflow-hidden flex flex-col mt-6 -mx-6 mx-0">
+                <div className="flex-1 overflow-y-auto pr-2 min-h-[200px]">
+                  <div className="prose prose-sm max-w-none">
+                    {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
+                      <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-blue-600 font-medium">
+                              Hook variant {(activeHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => navigateHook('prev')}
+                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                              >
+                                <ChevronLeft className="w-3 h-3 text-blue-600" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigateHook('next')}
+                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                              >
+                                <ChevronRight className="w-3 h-3 text-blue-600" />
+                              </button>
                             </div>
                           </div>
-                          <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
-                            {generatedPosts[activePostTab].hooks![(activeHookIndex[activePostTab] || 0)]}
-                          </p>
                         </div>
-                      )}
-                      <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
-                        {generatedPosts[activePostTab].content}
-                      </p>
-                    </div>
+                        <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                          {generatedPosts[activePostTab].hooks![(activeHookIndex[activePostTab] || 0)]}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                      {generatedPosts[activePostTab].content}
+                    </p>
                   </div>
                 </div>
-
-                {/* Action Button */}
-                <div className="flex justify-center pt-6 flex-shrink-0">
-                  <button 
+                
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
                     onClick={handleSelectVersion}
-                    className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                   >
-                    <Check className="w-4 h-4 mr-2" />
                     Vælg denne version
                   </button>
                 </div>
-              </div>
-            )}
+            </div>
           </div>
-        </Modal>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
