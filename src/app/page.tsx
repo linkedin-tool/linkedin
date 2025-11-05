@@ -479,7 +479,7 @@ export default function HomePage() {
                 Oplev hvor hurtigt det går
               </h2>
               <p className="text-xl text-gray-600 mb-8">
-                Fra idé til 3 personlige LinkedIn-udkast med 9 "scroll-stopping" hooks – skrevet i din stil, til dit publikum. Vælg den version du vil arbejde videre med og forfin den til det perfekte opslag.
+                Fra idé til 3 personlige LinkedIn-udkast med 9 &quot;scroll-stopping&quot; hooks – skrevet i din stil, til dit publikum. Vælg den version du vil arbejde videre med og forfin den til det perfekte opslag.
               </p>
             </div>
             
