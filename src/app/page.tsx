@@ -243,17 +243,18 @@ export default function HomePage() {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
         if (isIOS) {
-          // For iOS, use setTimeout and window.scrollTo for better compatibility
+          // For iOS, wait for modal to close completely, then jump directly to position
           setTimeout(() => {
             const elementPosition = section.offsetTop;
             const headerHeight = 80;
             const offsetPosition = elementPosition - headerHeight;
             
+            // Direct jump to position - no smooth scrolling to avoid conflicts
             window.scrollTo({
               top: offsetPosition,
-              behavior: 'smooth'
+              behavior: 'auto'
             });
-          }, 100); // Small delay to ensure modal is fully closed
+          }, 500); // Half second delay to ensure modal is completely closed
         } else {
           // For desktop/other browsers, use scrollIntoView
           section.scrollIntoView({ behavior: 'smooth' });
