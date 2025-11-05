@@ -122,6 +122,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ideas: {
+        Row: {
+          ai_suggestions: Json | null
+          ai_suggestions_status: string | null
+          ai_title: string | null
+          content: string
+          created_at: string | null
+          id: string
+          image_url: string | null
+          original_audio_url: string | null
+          title: string | null
+          transcribed_text: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_suggestions?: Json | null
+          ai_suggestions_status?: string | null
+          ai_title?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          original_audio_url?: string | null
+          title?: string | null
+          transcribed_text?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_suggestions?: Json | null
+          ai_suggestions_status?: string | null
+          ai_title?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          original_audio_url?: string | null
+          title?: string | null
+          transcribed_text?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       linkedin_post_images: {
         Row: {
           created_at: string | null
@@ -282,6 +330,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -344,6 +428,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_notifications: { Args: never; Returns: undefined }
       expire_free_trials: { Args: never; Returns: undefined }
       get_cron_job_id: { Args: { job_name: string }; Returns: number }
       get_posts_for_window: {
@@ -359,6 +444,7 @@ export type Database = {
       }
       get_queue_status: { Args: never; Returns: Json }
       get_upcoming_posts: { Args: { hours_ahead?: number }; Returns: Json }
+      mark_old_notifications_read: { Args: never; Returns: undefined }
       process_cron_job_responses: { Args: never; Returns: undefined }
       publish_scheduled_linkedin_posts: { Args: never; Returns: undefined }
     }
@@ -493,3 +579,25 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// Custom types for the application
+export interface AISuggestion {
+  title: string;
+  description: string;
+}
+
+export interface Idea {
+  id: string;
+  user_id: string;
+  content: string;
+  type: 'voice' | 'text' | 'image';
+  title?: string | null;
+  ai_title?: string | null;
+  transcribed_text?: string | null;
+  image_url?: string | null;
+  original_audio_url?: string | null;
+  ai_suggestions?: AISuggestion[] | null;
+  ai_suggestions_status?: 'pending' | 'generating' | 'completed' | 'failed' | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}

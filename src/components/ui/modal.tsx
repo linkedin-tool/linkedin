@@ -14,14 +14,18 @@ interface ModalAction {
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
-  title: string
+  title: string | React.ReactNode
   children: React.ReactNode
   className?: string
   actions?: ModalAction[]
+  footerActions?: React.ReactNode // New prop for fixed footer actions
+  showCreatedDate?: boolean // New prop to show created date under title
+  createdDate?: string // The creation date to display
 }
 
-export function Modal({ isOpen, onClose, title, children, className, actions }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, actions, footerActions, showCreatedDate, createdDate }: ModalProps) {
   const [showActionsMenu, setShowActionsMenu] = React.useState(false)
+  const [mouseDownOutside, setMouseDownOutside] = React.useState(false)
   
   // Handle escape key and click outside for actions menu
   React.useEffect(() => {
@@ -60,21 +64,52 @@ export function Modal({ isOpen, onClose, title, children, className, actions }: 
   return (
     <div 
       className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          setMouseDownOutside(true)
+        }
+      }}
+      onMouseUp={(e) => {
+        if (e.target === e.currentTarget && mouseDownOutside) {
+          onClose()
+        }
+        setMouseDownOutside(false)
+      }}
+      onMouseLeave={() => {
+        setMouseDownOutside(false)
+      }}
+      onClick={(e) => {
+        // Prevent the old onClick behavior
+        e.preventDefault()
+      }}
     >
       <div 
         className={cn(
-          "bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl max-h-[90vh] overflow-hidden",
+          "bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col",
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-xl font-bold text-gray-900">
-            {title}
-          </h3>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+          <div className="flex-1 mr-4">
+            {typeof title === 'string' ? (
+              <h3 className="text-xl font-bold text-gray-900">
+                {title}
+              </h3>
+            ) : (
+              <div className="text-xl font-bold text-gray-900">
+                {title}
+              </div>
+            )}
+            {/* Created date under title */}
+            {showCreatedDate && createdDate && (
+              <p className="text-sm text-gray-500 mt-1">
+                Oprettet: {createdDate}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Actions menu */}
             {actions && actions.length > 0 && (
               <div className="relative">
@@ -124,10 +159,17 @@ export function Modal({ isOpen, onClose, title, children, className, actions }: 
           </div>
         </div>
         
-        {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {/* Modal Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
+
+        {/* Fixed Footer */}
+        {footerActions && (
+          <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 h-16 sm:h-20 flex items-center justify-center">
+            {footerActions}
+          </div>
+        )}
       </div>
     </div>
   )

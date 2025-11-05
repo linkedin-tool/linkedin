@@ -37,7 +37,7 @@ export default function MineOpslagPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<LinkedInPost | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "scheduled" | "draft" | "failed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "scheduled" | "draft" | "failed" | "repost">("all");
   const [displayCount, setDisplayCount] = useState(20);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -217,7 +217,29 @@ export default function MineOpslagPage() {
 
     // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter(post => post.status === statusFilter);
+      if (statusFilter === "repost") {
+        // Filter for reposts
+        filtered = filtered.filter(post => post.is_repost === true);
+      } else if (statusFilter === "published") {
+        // Filter for published posts and sort by published_at descending (latest first)
+        filtered = filtered.filter(post => post.status === "published");
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.published_at || a.created_at);
+          const dateB = new Date(b.published_at || b.created_at);
+          return dateB.getTime() - dateA.getTime();
+        });
+      } else if (statusFilter === "scheduled") {
+        // Filter for scheduled posts and sort by scheduled_for ascending (next first)
+        filtered = filtered.filter(post => post.status === "scheduled" && post.scheduled_for);
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.scheduled_for!);
+          const dateB = new Date(b.scheduled_for!);
+          return dateA.getTime() - dateB.getTime();
+        });
+      } else {
+        // Regular status filter
+        filtered = filtered.filter(post => post.status === statusFilter);
+      }
     }
 
     // Apply search filter
@@ -245,7 +267,11 @@ export default function MineOpslagPage() {
     let filtered = allPosts;
     
     if (statusFilter !== "all") {
-      filtered = filtered.filter(post => post.status === statusFilter);
+      if (statusFilter === "repost") {
+        filtered = filtered.filter(post => post.is_repost === true);
+      } else {
+        filtered = filtered.filter(post => post.status === statusFilter);
+      }
     }
     
     if (searchQuery.trim()) {
@@ -857,7 +883,7 @@ export default function MineOpslagPage() {
                   <Filter className="text-gray-400 w-4 h-4" />
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as "all" | "published" | "scheduled" | "draft" | "failed")}
+                    onChange={(e) => setStatusFilter(e.target.value as "all" | "published" | "scheduled" | "draft" | "failed" | "repost")}
                     className="appearance-none px-4 py-2 pr-8 border border-gray-200 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-200 bg-white text-gray-900 text-base font-medium cursor-pointer hover:bg-gray-50 transition-colors h-10"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -869,6 +895,7 @@ export default function MineOpslagPage() {
                     <option value="all">Alle opslag</option>
                     <option value="published">Udgivne</option>
                     <option value="scheduled">Planlagte</option>
+                    <option value="repost">Genopslået</option>
                     <option value="draft">Kladder</option>
                     <option value="failed">Fejlede</option>
                   </select>
@@ -883,7 +910,14 @@ export default function MineOpslagPage() {
                   <span> • Søger efter &quot;{searchQuery}&quot;</span>
                 )}
                 {statusFilter !== "all" && (
-                  <span> • Filtreret efter {statusFilter === "published" ? "udgivne" : statusFilter === "scheduled" ? "planlagte" : statusFilter === "draft" ? "kladder" : statusFilter === "failed" ? "fejlede" : statusFilter}</span>
+                  <span> • Filtreret efter {
+                    statusFilter === "published" ? "udgivne" : 
+                    statusFilter === "scheduled" ? "planlagte" : 
+                    statusFilter === "draft" ? "kladder" : 
+                    statusFilter === "failed" ? "fejlede" : 
+                    statusFilter === "repost" ? "genopslået" : 
+                    statusFilter
+                  }</span>
                 )}
               </div>
             </Card>
@@ -900,7 +934,14 @@ export default function MineOpslagPage() {
                     {searchQuery 
                       ? `Ingen opslag matcher søgningen &quot;${searchQuery}&quot;`
                       : statusFilter !== "all"
-                      ? `Ingen ${statusFilter === "published" ? "udgivne" : statusFilter === "scheduled" ? "planlagte" : statusFilter === "draft" ? "kladder" : statusFilter === "failed" ? "fejlede" : statusFilter} opslag fundet`
+                      ? `Ingen ${
+                          statusFilter === "published" ? "udgivne" : 
+                          statusFilter === "scheduled" ? "planlagte" : 
+                          statusFilter === "draft" ? "kladder" : 
+                          statusFilter === "failed" ? "fejlede" : 
+                          statusFilter === "repost" ? "genopslåede" : 
+                          statusFilter
+                        } opslag fundet`
                       : "Ingen opslag at vise"
                     }
                   </p>
@@ -943,7 +984,7 @@ export default function MineOpslagPage() {
                           <h4 className="font-semibold text-gray-900 text-sm sm:text-base leading-tight mb-2 overflow-hidden" 
                               style={{
                                 display: '-webkit-box',
-                                WebkitLineClamp: 2,
+                                WebkitLineClamp: 1,
                                 WebkitBoxOrient: 'vertical'
                               }}>
                             {getPostTitle(post)}

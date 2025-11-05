@@ -10,15 +10,16 @@ import {
   ExternalLink,
   LogOut,
   User as UserIcon,
-  ChevronDown,
   Menu,
   X,
   Link as LinkIcon,
-  PlusCircle,
   FileText,
   Calendar,
   Activity,
-  Brain
+  Brain,
+  Lightbulb,
+  Plus,
+  Bell
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { LinkedInNotificationBanner } from '@/components/LinkedInNotificationBanner'
@@ -42,6 +43,18 @@ interface UserProfile {
   is_admin?: boolean | null
 }
 
+interface Notification {
+  id: string
+  user_id: string
+  title: string
+  message: string
+  type: 'info' | 'success' | 'warning' | 'error'
+  is_read: boolean
+  action_url?: string
+  created_at: string
+  updated_at: string
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -51,12 +64,98 @@ export default function DashboardLayout({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
+  const [createDropdownOpen, setCreateDropdownOpen] = useState(false)
+  const [notificationsDropdownOpen, setNotificationsDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationLimit, setNotificationLimit] = useState(20)
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const createDropdownRef = useRef<HTMLDivElement>(null)
+  const notificationsDropdownRef = useRef<HTMLDivElement>(null)
 
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
+
+  // Fetch notifications
+  const fetchNotifications = async (userId: string, limit = notificationLimit, append = false) => {
+    const { data: notificationsData } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1) as { data: Notification[] | null } // Fetch one extra to check if there are more
+
+    if (notificationsData) {
+      const hasMore = notificationsData.length > limit
+      const actualData = hasMore ? notificationsData.slice(0, limit) : notificationsData
+      
+      if (append) {
+        setNotifications(prev => [...prev, ...actualData])
+      } else {
+        setNotifications(actualData)
+        const unread = actualData.filter(n => !n.is_read).length
+        setUnreadCount(unread)
+      }
+      
+      setHasMoreNotifications(hasMore)
+    }
+  }
+
+  // Load more notifications
+  const loadMoreNotifications = async () => {
+    if (!userProfile) return
+    
+    const currentCount = notifications.length
+    const { data: moreNotifications } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .order('created_at', { ascending: false })
+      .range(currentCount, currentCount + 9) // Load 10 more
+      .limit(11) as { data: Notification[] | null } // Fetch one extra to check if there are more
+
+    if (moreNotifications) {
+      const hasMore = moreNotifications.length > 10
+      const actualData = hasMore ? moreNotifications.slice(0, 10) : moreNotifications
+      
+      setNotifications(prev => [...prev, ...actualData])
+      setHasMoreNotifications(hasMore)
+    }
+  }
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+
+    // Update local state
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+    )
+    setUnreadCount(prev => Math.max(0, prev - 1))
+  }
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    if (!userProfile) return
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userProfile.id)
+      .eq('is_read', false)
+
+    // Update local state
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, is_read: true }))
+    )
+    setUnreadCount(0)
+  }
 
   useEffect(() => {
     const checkUser = async () => {
@@ -80,6 +179,9 @@ export default function DashboardLayout({
         setUserProfile(profileData)
       }
 
+      // Fetch notifications
+      await fetchNotifications(user.id)
+
       setLoading(false)
     }
 
@@ -91,22 +193,28 @@ export default function DashboardLayout({
     setMobileMenuOpen(false)
   }, [pathname])
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setUserDropdownOpen(false)
       }
+      if (createDropdownRef.current && !createDropdownRef.current.contains(event.target as Node)) {
+        setCreateDropdownOpen(false)
+      }
+      if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(event.target as Node)) {
+        setNotificationsDropdownOpen(false)
+      }
     }
 
-    if (userDropdownOpen) {
+    if (userDropdownOpen || createDropdownOpen || notificationsDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [userDropdownOpen])
+  }, [userDropdownOpen, createDropdownOpen, notificationsDropdownOpen])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -133,12 +241,6 @@ export default function DashboardLayout({
       current: pathname === '/dashboard' 
     },
     { 
-      name: 'Nyt Opslag', 
-      href: '/dashboard/new-post', 
-      icon: PlusCircle,
-      current: pathname === '/dashboard/new-post' 
-    },
-    { 
       name: 'Content Plan', 
       href: '/dashboard/content-plan', 
       icon: Calendar,
@@ -149,6 +251,12 @@ export default function DashboardLayout({
       href: '/dashboard/mine-opslag', 
       icon: FileText,
       current: pathname === '/dashboard/mine-opslag' 
+    },
+    { 
+      name: 'Idé Bank', 
+      href: '/dashboard/idebank', 
+      icon: Lightbulb,
+      current: pathname === '/dashboard/idebank' 
     },
     { 
       name: 'Træn din AI', 
@@ -287,7 +395,7 @@ export default function DashboardLayout({
         {/* LinkedIn Notification Banner */}
         <LinkedInNotificationBanner />
         
-        {/* Top Header with User Dropdown - Fixed */}
+        {/* Top Header with Action Icons - Fixed */}
         <div className="bg-white shadow-sm border-b border-gray-200 h-16 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
           {/* Mobile menu button */}
           <button
@@ -297,24 +405,158 @@ export default function DashboardLayout({
             <Menu className="w-6 h-6" />
           </button>
           
-          <div className="flex justify-end flex-1 lg:w-full">
+          {/* Header Actions */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Create Dropdown */}
+            <div className="relative" ref={createDropdownRef}>
+              <button
+                onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
+                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none"
+              >
+                <Plus className="w-5 h-5 text-gray-600" />
+              </button>
+
+              {/* Create Dropdown Menu */}
+              {createDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <Link
+                    href="/dashboard/new-post"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setCreateDropdownOpen(false)}
+                  >
+                    <FileText className="w-4 h-4 mr-3 text-gray-400" />
+                    Nyt opslag
+                  </Link>
+                  <Link
+                    href="/dashboard/ny-ide"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setCreateDropdownOpen(false)}
+                  >
+                    <Lightbulb className="w-4 h-4 mr-3 text-gray-400" />
+                    Ny idé
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Notifications */}
+            <div className="relative" ref={notificationsDropdownRef}>
+              <button
+                onClick={() => setNotificationsDropdownOpen(!notificationsDropdownOpen)}
+                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none relative"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown Menu */}
+              {notificationsDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-900">Notifikationer</h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Markér alle som læst
+                      </button>
+                    )}
+                  </div>
+                  
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 mb-1">Ingen notifikationer</p>
+                      <p className="text-xs text-gray-400">Du har ingen nye notifikationer lige nu</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${
+                            !notification.is_read ? 'bg-blue-50' : ''
+                          }`}
+                          onClick={() => {
+                            if (!notification.is_read) {
+                              markAsRead(notification.id)
+                            }
+                            if (notification.action_url) {
+                              router.push(notification.action_url)
+                              setNotificationsDropdownOpen(false)
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                              notification.type === 'success' ? 'bg-green-500' :
+                              notification.type === 'warning' ? 'bg-yellow-500' :
+                              notification.type === 'error' ? 'bg-red-500' :
+                              'bg-blue-500'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {notification.title}
+                                </p>
+                                {!notification.is_read && (
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(notification.created_at).toLocaleDateString('da-DK', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Load More Button */}
+                      {hasMoreNotifications && (
+                        <div className="px-4 py-3 border-t border-gray-100">
+                          <button
+                            onClick={loadMoreNotifications}
+                            className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            Vis flere notifikationer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* User Menu */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center space-x-3 text-sm focus:outline-none"
+                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors focus:outline-none"
               >
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-gray-600" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'Bruger'}</p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
+                <UserIcon className="w-5 h-5 text-gray-600" />
               </button>
 
-              {/* Dropdown Menu */}
+              {/* User Dropdown Menu */}
               {userDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">{userProfile?.name || 'Bruger'}</p>
+                    <p className="text-xs text-gray-500">{userProfile?.email || ''}</p>
+                  </div>
                   <Link
                     href="/dashboard/settings"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"

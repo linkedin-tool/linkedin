@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import VoiceRecorder from "@/components/VoiceRecorder";
 import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
@@ -87,6 +88,16 @@ export default function NewPostPage() {
       setExistingImageUrls(existingImages);
     }
   }, [searchParams]);
+
+  // Tjek for valgt post content fra idebank
+  useEffect(() => {
+    const selectedContent = localStorage.getItem('selectedPostContent');
+    if (selectedContent) {
+      setText(selectedContent);
+      // Ryd localStorage efter brug
+      localStorage.removeItem('selectedPostContent');
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent, publishType?: "now" | "schedule" | "draft") {
     e.preventDefault();
@@ -459,9 +470,29 @@ export default function NewPostPage() {
           
           <form onSubmit={onSubmit} className="space-y-6">
             <div>
-              <label htmlFor="text" className="block text-base font-medium text-gray-700 mb-2">
-                Opslag tekst
-              </label>
+              <div className="mb-2">
+                {/* Mobile layout - vertical stacking */}
+                <div className="sm:hidden">
+                  <label htmlFor="text" className="block text-base font-medium text-gray-700 mb-2">
+                    Opslag tekst
+                  </label>
+                  <div className="flex justify-end mb-2">
+                    <VoiceRecorder 
+                      onTranscription={(transcribedText) => setText(transcribedText)}
+                    />
+                  </div>
+                </div>
+
+                {/* Desktop layout - side by side */}
+                <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
+                  <label htmlFor="text" className="block text-base font-medium text-gray-700">
+                    Opslag tekst
+                  </label>
+                  <VoiceRecorder 
+                    onTranscription={(transcribedText) => setText(transcribedText)}
+                  />
+                </div>
+              </div>
               <textarea
                 id="text"
                 className="w-full border-2 border-gray-200 rounded-2xl p-4 min-h-[240px] text-base text-gray-900 resize-y focus:border-gray-200 focus:outline-none focus:ring-0 focus:shadow-none transition-colors"

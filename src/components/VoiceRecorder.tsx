@@ -114,10 +114,10 @@ export default function VoiceRecorder({ onTranscription, className = '' }: Voice
       onClick={handleClick}
       disabled={isProcessing || isInitializing}
       className={`
-        inline-flex items-center gap-2 px-3 py-2 
+        inline-flex items-center gap-2 px-4 py-2 
         bg-blue-600 hover:bg-blue-700 
         border border-blue-600 hover:border-blue-700
-        rounded-lg text-sm font-medium text-white
+        rounded-full text-sm font-semibold text-white
         shadow-sm hover:shadow-md
         transition-all duration-200
         disabled:opacity-50 disabled:cursor-not-allowed

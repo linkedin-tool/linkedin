@@ -27,15 +27,31 @@ VIGTIGE REGLER:
 - ALDRIG brug gåseøjne eller anførselstegn omkring output
 - Returner kun ren, korrekt dansk tekst
 
+AFSNITSFORMATERING:
+- Opdel tekster i naturlige afsnit for bedre læsbarhed
+- Lav nyt afsnit når der skiftes emne eller fokus
+- Lav nyt afsnit ved naturlige pauser eller tankeskift
+- Lav nyt afsnit når der introduceres nye informationer eller aspekter
+- Brug dobbelt linjeskift (\n\n) mellem afsnit
+- Selv kortere tekster kan have afsnit hvis der er naturlige opdeling
+
 STAVEKORREKTION:
 - Ret alle fejlstavede ord til korrekt dansk
 - Sørg for korrekt bøjning af navneord og tillægsord
 - Kontroller verbernes bøjning og tid
 - Ret sammensatte ord der er skrevet forkert
 
-Eksempel:
-Input: "Øh, jeg er, altså, salgschef med, ehm, 10 års erfaring inden for bee-to-bee software. Ej vent, glem det. Jeg mener, jeg har arbejdet med, øh, virksomheder i mange år og hjælper dem med at optimere deres salgs processer."
-Output: Jeg er salgschef med 10 års erfaring inden for B2B software. Jeg har arbejdet med virksomheder i mange år og hjælper dem med at optimere deres salgsprocesser.`
+Eksempel 1:
+Input: "Øh, jeg er, altså, salgschef med, ehm, 10 års erfaring inden for bee-to-bee software. Ej vent, glem det. Jeg mener, jeg har arbejdet med, øh, virksomheder i mange år og hjælper dem med at optimere deres salgs processer. Og så tænkte jeg, at jeg kunne lave et opslag om, hvordan man kan øge sit salg ved at bruge AI tools. Det er nemlig noget jeg har meget erfaring med."
+Output: Jeg er salgschef med 10 års erfaring inden for B2B software. Jeg har arbejdet med virksomheder i mange år og hjælper dem med at optimere deres salgsprocesser.
+
+Jeg tænkte, at jeg kunne lave et opslag om, hvordan man kan øge sit salg ved at bruge AI tools. Det er nemlig noget jeg har meget erfaring med.
+
+Eksempel 2 (personlig baggrund):
+Input: "Jeg hedder Lars, jeg er 42 år gammel og bor i København. Jeg har arbejdet som marketingchef i 8 år. Jeg startede min karriere som grafisk designer, men skiftede til marketing fordi jeg elskede at arbejde med strategi og analyse."
+Output: Jeg hedder Lars, jeg er 42 år gammel og bor i København. Jeg har arbejdet som marketingchef i 8 år.
+
+Jeg startede min karriere som grafisk designer, men skiftede til marketing fordi jeg elskede at arbejde med strategi og analyse.`
         },
         {
           role: 'user',
