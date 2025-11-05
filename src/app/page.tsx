@@ -239,7 +239,25 @@ export default function HomePage() {
       // User clicked "Se priser først" - scroll to pricing
       const section = document.getElementById('pricing');
       if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
+        // iOS Safari fix: Use setTimeout and alternative scroll method
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        if (isIOS) {
+          // For iOS, use setTimeout and window.scrollTo for better compatibility
+          setTimeout(() => {
+            const elementPosition = section.offsetTop;
+            const headerHeight = 80;
+            const offsetPosition = elementPosition - headerHeight;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }, 100); // Small delay to ensure modal is fully closed
+        } else {
+          // For desktop/other browsers, use scrollIntoView
+          section.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     }
     // If result.isDismissed (clicked outside or escape), do nothing - just close modal
