@@ -8,12 +8,11 @@ export default function Footer() {
           <div>
             <div className="flex items-center justify-center md:justify-start mb-4">
               <span className="text-xl">
-                <span style={{fontWeight: 800}}>Basic</span>
-                <span style={{fontWeight: 300}}>Platform</span>
+                <span style={{fontWeight: 800}}>Nolia</span>
               </span>
             </div>
             <p className="text-gray-400 text-sm">
-              En simpel platform til at administrere dine abonnementer og betalinger.
+              AI-drevet LinkedIn-værktøj, der hjælper dig med at skabe stærke opslag på få minutter.
             </p>
           </div>
           <div>
@@ -43,7 +42,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-gray-400 text-center md:text-left text-sm">
-              &copy; 2025 Basic Platform. Alle rettigheder forbeholdes.
+              &copy; 2025 Nolia. Alle rettigheder forbeholdes.
             </p>
             <div className="flex flex-wrap justify-center md:justify-end gap-6 text-sm text-gray-400">
               <Link href="/handelsbetingelser" className="hover:text-white transition-colors">

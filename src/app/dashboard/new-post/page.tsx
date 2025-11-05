@@ -1225,16 +1225,18 @@ export default function NewPostPage() {
               <div key={angle} className="flex items-center justify-between text-sm">
                 <span className="capitalize text-gray-700">{angle} vinkel:</span>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    completedPosts.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  <span className={`text-xs px-2 py-1 rounded font-medium w-[80px] flex items-center justify-center ${
+                    completedPosts.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                   }`}>
-                    Opslag {completedPosts.has(angle) ? '✓' : '...'}
+                    <span className="mr-1">Opslag</span>
+                    <span className="w-3 text-center">{completedPosts.has(angle) ? '✓' : '...'}</span>
                   </span>
                   {hooks.length === 0 && (
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      completedHooks.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    <span className={`text-xs px-2 py-1 rounded font-medium w-[68px] flex items-center justify-center ${
+                      completedHooks.has(angle) ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                     }`}>
-                      Hook {completedHooks.has(angle) ? '✓' : '...'}
+                      <span className="mr-1">Hook</span>
+                      <span className="w-3 text-center">{completedHooks.has(angle) ? '✓' : '...'}</span>
                     </span>
                   )}
                 </div>
@@ -1263,74 +1265,78 @@ export default function NewPostPage() {
         {generatedPosts.length > 0 && (
           <div className="flex flex-col h-full">
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 -mx-6 px-6">
-                {generatedPosts.map((post, index) => (
-                  <button
-                    key={post.id}
-                    onClick={() => setActivePostTab(index)}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                      activePostTab === index
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {post.angle === 'jordnær' ? 'Jordnær' : 
-                     post.angle === 'professionel' ? 'Professionel' : 'Storytelling'}
-                  </button>
-                ))}
-              </div>
+            <div className="flex justify-center sm:justify-start border-b border-gray-200">
+              {generatedPosts.map((post, index) => (
+                <button
+                  key={post.id}
+                  onClick={() => setActivePostTab(index)}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activePostTab === index
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {post.angle === 'jordnær' ? 'Jordnær' : 
+                   post.angle === 'professionel' ? 'Professionel' : 'Storytelling'}
+                </button>
+              ))}
+            </div>
 
-            {/* Content */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex-1 min-h-0 overflow-hidden flex flex-col mt-6 -mx-6 mx-0">
-                <div className="flex-1 overflow-y-auto pr-2 min-h-[200px]">
-                  <div className="prose prose-sm max-w-none">
-                    {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
-                      <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-blue-600 font-medium">
-                              Hook variant {(activePostHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => navigatePostHook('prev')}
-                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
-                              >
-                                <ChevronLeft className="w-3 h-3 text-blue-600" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => navigatePostHook('next')}
-                                className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                                disabled={generatedPosts[activePostTab].hooks!.length <= 1}
-                              >
-                                <ChevronRight className="w-3 h-3 text-blue-600" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
-                          {generatedPosts[activePostTab].hooks![(activePostHookIndex[activePostTab] || 0)]}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
-                      {generatedPosts[activePostTab].content}
-                    </p>
+            {/* Hook Variant Navigation - Fixed at top */}
+            {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
+              <div className="flex justify-end mb-4 mt-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-blue-600 font-medium">
+                    Hook variant {(activePostHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => navigatePostHook('prev')}
+                      className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                      disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                    >
+                      <ChevronLeft className="w-3 h-3 text-blue-600" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigatePostHook('next')}
+                      className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                      disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                    >
+                      <ChevronRight className="w-3 h-3 text-blue-600" />
+                    </button>
                   </div>
                 </div>
-                
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={handleSelectPostVersion}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                  >
-                    Vælg denne version
-                  </button>
+              </div>
+            )}
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto pr-2">
+              {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
+                <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                  <p className="text-blue-900 font-medium text-sm mb-3">🪝 Scroll-stopping hook:</p>
+                  <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                    {generatedPosts[activePostTab].hooks![(activePostHookIndex[activePostTab] || 0)]}
+                  </p>
                 </div>
+              )}
+              
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                  {generatedPosts[activePostTab].content}
+                </p>
+              </div>
+            </div>
+            
+            {/* Fixed CTA at bottom */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSelectPostVersion}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+              >
+                Vælg denne version
+              </button>
             </div>
           </div>
         )}

@@ -44,8 +44,7 @@ export default function Header() {
             <div className="flex items-center">
               <Link href="/" onClick={closeMobileMenu}>
                 <span className="text-xl lg:text-2xl text-gray-900">
-                  <span style={{fontWeight: 800}}>Basic</span>
-                  <span style={{fontWeight: 300}}>Platform</span>
+                  <span style={{fontWeight: 800}}>Nolia</span>
                 </span>
               </Link>
             </div>
