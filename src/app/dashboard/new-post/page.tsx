@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send } from "lucide-react";
+import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
 
@@ -25,6 +25,11 @@ export default function NewPostPage() {
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [returnTo, setReturnTo] = useState<string>('mine-opslag');
   const [editPostStatus, setEditPostStatus] = useState<string | null>(null);
+  
+  // Hook states
+  const [hooks, setHooks] = useState<string[]>([]);
+  const [activeHookIndex, setActiveHookIndex] = useState(0);
+  const [generatingHooks, setGeneratingHooks] = useState(false);
 
   // Funktion til at få den korrekte return URL
   const getReturnUrl = () => {
@@ -89,15 +94,140 @@ export default function NewPostPage() {
     }
   }, [searchParams]);
 
-  // Tjek for valgt post content fra idebank
+  // Tjek for valgt post content og hooks fra idebank
   useEffect(() => {
     const selectedContent = localStorage.getItem('selectedPostContent');
+    const selectedHooks = localStorage.getItem('selectedPostHooks');
+    const selectedHookIndex = localStorage.getItem('selectedHookIndex');
+    
     if (selectedContent) {
-      setText(selectedContent);
-      // Ryd localStorage efter brug
+      // Split hook og content hvis der er en hook
+      const parts = selectedContent.split('\n\n');
+      if (parts.length > 1 && selectedHooks) {
+        // Der er både hook og content
+        setText(parts.slice(1).join('\n\n')); // Alt efter første del
+      } else {
+        // Kun content
+        setText(selectedContent);
+      }
       localStorage.removeItem('selectedPostContent');
     }
+    
+    if (selectedHooks) {
+      try {
+        const hooksArray = JSON.parse(selectedHooks);
+        setHooks(hooksArray);
+        if (selectedHookIndex) {
+          setActiveHookIndex(parseInt(selectedHookIndex));
+        }
+      } catch (error) {
+        console.error('Error parsing selected hooks:', error);
+      }
+      localStorage.removeItem('selectedPostHooks');
+      localStorage.removeItem('selectedHookIndex');
+    }
   }, []);
+
+  // Navigation mellem hooks
+  const navigateHook = (direction: 'prev' | 'next') => {
+    if (hooks.length === 0) return;
+    
+    let newIndex;
+    if (direction === 'prev') {
+      newIndex = activeHookIndex > 0 ? activeHookIndex - 1 : hooks.length - 1;
+    } else {
+      newIndex = activeHookIndex < hooks.length - 1 ? activeHookIndex + 1 : 0;
+    }
+    
+    setActiveHookIndex(newIndex);
+  };
+
+  // Generer hooks baseret på opslag-tekst
+  const generateHooks = async () => {
+    if (!text.trim()) {
+      Swal.fire({
+        title: '📝 Ingen tekst',
+        text: 'Skriv dit opslag først, så kan jeg generere hooks til det.',
+        icon: undefined,
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'rounded-xl',
+          title: 'text-lg font-semibold text-gray-900',
+          htmlContainer: 'text-gray-700',
+          confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium'
+        },
+        buttonsStyling: false
+      });
+      return;
+    }
+
+    setGeneratingHooks(true);
+    
+    try {
+      // Vi bruger 'professionel' som default angle for hooks genereret direkte fra opslag
+      const response = await fetch('/api/generate-hook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: text,
+          angle: 'professionel'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate hooks');
+      }
+
+      const result = await response.json();
+      if (result.hooks && result.hooks.length > 0) {
+        setHooks(result.hooks);
+        setActiveHookIndex(0);
+        
+        Swal.fire({
+          title: '🪝 Hooks genereret!',
+          text: `Jeg har lavet ${result.hooks.length} forskellige hooks til dit opslag. Du kan navigere mellem dem med pilene.`,
+          icon: undefined,
+          confirmButtonText: 'Fedt!',
+          customClass: {
+            popup: 'rounded-xl',
+            title: 'text-lg font-semibold text-gray-900',
+            htmlContainer: 'text-gray-700',
+            confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium'
+          },
+          buttonsStyling: false
+        });
+      } else {
+        throw new Error('No hooks returned');
+      }
+    } catch (error) {
+      console.error('Error generating hooks:', error);
+      Swal.fire({
+        title: '❌ Fejl',
+        text: 'Der skete en fejl ved generering af hooks. Prøv igen.',
+        icon: undefined,
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'rounded-xl',
+          title: 'text-lg font-semibold text-gray-900',
+          htmlContainer: 'text-gray-700',
+          confirmButton: 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium'
+        },
+        buttonsStyling: false
+      });
+    } finally {
+      setGeneratingHooks(false);
+    }
+  };
+
+  // Få den komplette tekst (hook + opslag)
+  const getCompleteText = () => {
+    if (hooks.length > 0 && hooks[activeHookIndex]) {
+      return hooks[activeHookIndex] + '\n\n' + text;
+    }
+    return text;
+  };
 
   async function onSubmit(e: React.FormEvent, publishType?: "now" | "schedule" | "draft") {
     e.preventDefault();
@@ -119,7 +249,7 @@ export default function NewPostPage() {
     }
 
     const fd = new FormData();
-    fd.append("text", text);
+    fd.append("text", getCompleteText());
     fd.append("visibility", visibility);
     
     // Hvis vi er i edit mode, brug update endpoint
@@ -469,6 +599,65 @@ export default function NewPostPage() {
           </div>
           
           <form onSubmit={onSubmit} className="space-y-6">
+            {/* Hook Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-base font-medium text-gray-700">
+                  🪝 Scroll-stopping hook (valgfrit)
+                </label>
+                <button
+                  type="button"
+                  onClick={generateHooks}
+                  disabled={generatingHooks || !text.trim()}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {generatingHooks ? 'Genererer...' : 'Generer 3 hooks'}
+                </button>
+              </div>
+              
+              {hooks.length > 0 ? (
+                <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-600 font-medium">
+                        Hook variant {activeHookIndex + 1} ud af {hooks.length}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => navigateHook('prev')}
+                          className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          disabled={hooks.length <= 1}
+                        >
+                          <ChevronLeft className="w-3 h-3 text-blue-600" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigateHook('next')}
+                          className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                          disabled={hooks.length <= 1}
+                        >
+                          <ChevronRight className="w-3 h-3 text-blue-600" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                    {hooks[activeHookIndex]}
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-gray-600 text-sm">
+                    Skriv dit opslag nedenfor, så kan du efterfølgende generere 3 fængende hooks til det. 
+                    En hook er de første 1-2 linjer, der får folk til at stoppe scroll og læse videre.
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="mb-2">
                 {/* Mobile layout - vertical stacking */}

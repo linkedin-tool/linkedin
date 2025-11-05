@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const { content, angle } = await request.json();
     
-    console.log('🪝 Generating scroll-stopping hook for angle:', angle);
+    console.log('🪝 Generating 3 scroll-stopping hooks for angle:', angle);
     console.log('📝 Content preview:', content?.substring(0, 100) + '...');
 
     if (!content || !angle) {
@@ -26,16 +26,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing content or angle field' }, { status: 400 });
     }
 
-    // Generate scroll-stopping hook
-    const hook = await generateScrollStoppingHook(content, angle);
+    // Generate 3 scroll-stopping hook variants
+    const hooks = await generateScrollStoppingHooks(content, angle);
 
     return NextResponse.json({ 
       success: true, 
-      hook 
+      hooks 
     });
 
   } catch (error) {
-    console.error('❌ Error generating hook:', error);
+    console.error('❌ Error generating hooks:', error);
     console.error('🔍 Error details:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ 
       error: 'Internal server error',
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateScrollStoppingHook(content: string, angle: 'jordnær' | 'professionel' | 'storytelling'): Promise<string> {
+async function generateScrollStoppingHooks(content: string, angle: 'jordnær' | 'professionel' | 'storytelling'): Promise<string[]> {
   let prompt = `🧠 Hook Optimizer – Du er en ekspert i scroll-stopping hooks til LinkedIn
 
 🎯 FORMÅL: Få læsere til at stoppe scroll og trykke "Læs mere" ved at gøre de første 1-2 linjer maksimalt dragende.
@@ -154,21 +154,24 @@ STORYTELLING VINKEL - Kombiner ekspert-principper med:
 
   prompt += `
 
-OPGAVE: Analyser det følgende LinkedIn opslag og lav en perfekt scroll-stopping hook der:
-1. Følger ALLE grundprincipper (konkrethed, tal, kontrast, stakes, authority, tease)
-2. Bruger 1-3 forstærkere (talforankring, tid, A→B-kontrast, målgruppe-kald, kraftfulde verber)
-3. Passer til ${angle} vinklen
-4. Er maksimalt 2-3 linjer
-5. Skaber maksimal nysgerrighed uden at afsløre konklusionen
+OPGAVE: Analyser det følgende LinkedIn opslag og lav 3 forskellige scroll-stopping hooks der:
+1. Følger ALLE grundprincipper (konkrethed, tal, kontrast, stakes, authority, tease).
+2. Bruger 1-3 forstærkere (talforankring, tid, A→B-kontrast, målgruppe-kald, kraftfulde verber).
+3. Passer til ${angle} vinklen.
+4. Er maksimalt 2-3 linjer hver.
+5. Skaber maksimal nysgerrighed uden at afsløre konklusionen.
 6. Du må ALDRIG bruge lang tankestreg (—). Brug bindestreg i stedet (-), hvis det er nødvendigt.
-7. Hooken skal maksimalt være på 1-2 sætninger.
+7. Hver hook skal maksimalt være på 1-2 sætninger.
+8. Hver hook skal have en forskellig tilgang/vinkel på samme indhold.
+9. Du må ALDRIG formode eller antage noget. Eks nævne specifikke tal, mængder, perioder mv., som fx '300 km', '10 dage', '5 kg' osv, hvis ikke det står nævnt idéen.
 
-Returner KUN hooken - intet andet.`;
+Returner de 3 hooks adskilt af "|||" - intet andet.
+Format: Hook1|||Hook2|||Hook3`;
 
   try {
-    console.log('🤖 Calling OpenAI API to generate hook for angle:', angle);
+    console.log('🤖 Calling OpenAI API to generate 3 hooks for angle:', angle);
     
-    // Call OpenAI GPT-4 to generate the hook
+    // Call OpenAI GPT-4 to generate 3 hooks
     const response = await openai.chat.completions.create({
       model: 'gpt-4.1',
       messages: [
@@ -178,29 +181,39 @@ Returner KUN hooken - intet andet.`;
         },
         {
           role: 'user',
-          content: `Lav en fængende hook til dette ${angle} opslag:\n\n"${content}"`
+          content: `Lav 3 forskellige fængende hooks til dette ${angle} opslag:\n\n"${content}"`
         }
       ],
       temperature: 0.9, // Højere kreativitet for hooks
-      max_tokens: 100
+      max_tokens: 400
     });
 
     const aiResponse = response.choices[0]?.message?.content || '';
-    console.log('✅ Hook generated for', angle, ':', aiResponse);
+    console.log('✅ Raw hooks response for', angle, ':', aiResponse);
     
-    // Clean up the response
-    const cleanHook = aiResponse
-      .replace(/^\n+|\n+$/g, '') // Remove leading/trailing newlines
-      .replace(/^["']|["']$/g, '') // Remove quotes
-      .trim();
+    // Split the response by ||| and clean up each hook
+    const hooks = aiResponse.split('|||').map(hook => 
+      hook
+        .replace(/^\n+|\n+$/g, '') // Remove leading/trailing newlines
+        .replace(/^["']|["']$/g, '') // Remove quotes
+        .trim()
+    ).filter(hook => hook.length > 10); // Filter out too short hooks
     
-    if (cleanHook.length < 10) {
-      throw new Error(`Generated hook too short for ${angle}: "${cleanHook}"`);
+    // Ensure we have exactly 3 hooks
+    if (hooks.length < 3) {
+      console.log('⚠️ Only got', hooks.length, 'hooks, padding with variations');
+      // If we don't get 3 hooks, pad with variations of the first hook
+      while (hooks.length < 3) {
+        hooks.push(hooks[0] || 'Hook kunne ikke genereres');
+      }
     }
     
-    return cleanHook;
+    const finalHooks = hooks.slice(0, 3); // Return exactly 3 hooks
+    console.log('✅ 3 Hooks generated for', angle, ':', finalHooks);
+    
+    return finalHooks;
   } catch (error) {
-    console.error('❌ Error calling OpenAI API for hook:', angle, error);
+    console.error('❌ Error calling OpenAI API for hooks:', angle, error);
     console.error('🔍 Error details:', error instanceof Error ? error.message : 'Unknown error');
     
     // If AI fails, throw error

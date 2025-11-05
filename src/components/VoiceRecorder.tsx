@@ -117,7 +117,7 @@ export default function VoiceRecorder({ onTranscription, className = '' }: Voice
         inline-flex items-center gap-2 px-4 py-2 
         bg-blue-600 hover:bg-blue-700 
         border border-blue-600 hover:border-blue-700
-        rounded-full text-sm font-semibold text-white
+        rounded-lg text-sm font-medium text-white
         shadow-sm hover:shadow-md
         transition-all duration-200
         disabled:opacity-50 disabled:cursor-not-allowed

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { Lightbulb, Calendar, PlusCircle, Search, Filter, MoreVertical, Edit, Trash2, Mic, Type, Image as ImageIcon, Check, X, BookmarkPlus, Eye, Info } from "lucide-react";
+import { Lightbulb, Calendar, PlusCircle, Search, Filter, MoreVertical, Edit, Trash2, Mic, Type, Image as ImageIcon, Check, X, BookmarkPlus, Eye, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Swal from 'sweetalert2';
 
@@ -61,7 +61,8 @@ export default function IdebankPage() {
   const [generatingPosts, setGeneratingPosts] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showPostsModal, setShowPostsModal] = useState(false);
-  const [generatedPosts, setGeneratedPosts] = useState<Array<{id: number, angle: string, title: string, content: string, hook?: string}>>([]);
+  const [generatedPosts, setGeneratedPosts] = useState<Array<{id: number, angle: string, title: string, content: string, hooks?: string[]}>>([]);
+  const [activeHookIndex, setActiveHookIndex] = useState<{[key: number]: number}>({});
   const [activePostTab, setActivePostTab] = useState(0);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [completedPosts, setCompletedPosts] = useState<Set<string>>(new Set());
@@ -959,7 +960,7 @@ export default function IdebankPage() {
           // Update completed posts
           setCompletedPosts(prev => new Set([...prev, angle]));
           
-          // Immediately generate hook for this post
+          // Immediately generate 3 hooks for this post
           try {
             const hookResponse = await fetch('/api/generate-hook', {
               method: 'POST',
@@ -974,13 +975,15 @@ export default function IdebankPage() {
 
             if (hookResponse.ok) {
               const hookResult = await hookResponse.json();
-              post.hook = hookResult.hook;
-              console.log(`🪝 Hook generated for post ${id} (${angle})`);
+              post.hooks = hookResult.hooks || [];
+              console.log(`🪝 ${post.hooks.length} Hooks generated for post ${id} (${angle})`);
             } else {
-              console.warn(`Failed to generate hook for ${angle}`);
+              console.warn(`Failed to generate hooks for ${angle}`);
+              post.hooks = [];
             }
           } catch (hookError) {
-            console.error(`Error generating hook for ${angle}:`, hookError);
+            console.error(`Error generating hooks for ${angle}:`, hookError);
+            post.hooks = [];
           }
           
           // Update completed hooks
@@ -1009,6 +1012,7 @@ export default function IdebankPage() {
       // Set generated posts and show posts modal
       setGeneratedPosts(posts);
       setActivePostTab(0);
+      setActiveHookIndex({});
       setShowProgressModal(false);
       setShowPostsModal(true);
 
@@ -1030,6 +1034,26 @@ export default function IdebankPage() {
     }
   };
 
+  // Navigation mellem hooks
+  const navigateHook = (direction: 'prev' | 'next') => {
+    const currentPost = generatedPosts[activePostTab];
+    if (!currentPost?.hooks || currentPost.hooks.length === 0) return;
+    
+    const currentIndex = activeHookIndex[activePostTab] || 0;
+    let newIndex;
+    
+    if (direction === 'prev') {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : currentPost.hooks.length - 1;
+    } else {
+      newIndex = currentIndex < currentPost.hooks.length - 1 ? currentIndex + 1 : 0;
+    }
+    
+    setActiveHookIndex(prev => ({
+      ...prev,
+      [activePostTab]: newIndex
+    }));
+  };
+
   // Håndter valg af version
   const handleSelectVersion = () => {
     const selectedPost = generatedPosts[activePostTab];
@@ -1037,17 +1061,28 @@ export default function IdebankPage() {
     
     // Kombiner hook og content hvis hook findes
     let fullContent = selectedPost.content;
-    if (selectedPost.hook) {
-      fullContent = selectedPost.hook + '\n\n' + selectedPost.content;
+    if (selectedPost.hooks && selectedPost.hooks.length > 0) {
+      const currentHookIndex = activeHookIndex[activePostTab] || 0;
+      const selectedHook = selectedPost.hooks[currentHookIndex];
+      if (selectedHook) {
+        fullContent = selectedHook + '\n\n' + selectedPost.content;
+      }
     }
     
-    // Gem den valgte tekst i localStorage så den kan bruges på new-post siden
+    // Gem den valgte tekst og hooks i localStorage så de kan bruges på new-post siden
     localStorage.setItem('selectedPostContent', fullContent);
+    
+    // Gem hooks og aktiv hook index
+    if (selectedPost.hooks && selectedPost.hooks.length > 0) {
+      localStorage.setItem('selectedPostHooks', JSON.stringify(selectedPost.hooks));
+      localStorage.setItem('selectedHookIndex', (activeHookIndex[activePostTab] || 0).toString());
+    }
     
     // Luk modal og redirect til new-post siden
     setShowPostsModal(false);
     setGeneratedPosts([]);
     setActivePostTab(0);
+    setActiveHookIndex({});
     setProgressPercentage(0);
     setCompletedPosts(new Set());
     setCompletedHooks(new Set());
@@ -2011,6 +2046,7 @@ export default function IdebankPage() {
             setShowPostsModal(false);
             setGeneratedPosts([]);
             setActivePostTab(0);
+      setActiveHookIndex({});
             setProgressPercentage(0);
             setCompletedPosts(new Set());
           }}
@@ -2044,11 +2080,34 @@ export default function IdebankPage() {
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
                   <div className="flex-1 overflow-y-auto pr-2 min-h-[200px]">
                     <div className="prose prose-sm max-w-none">
-                      {generatedPosts[activePostTab].hook && (
+                      {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
                         <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                          <p className="text-blue-900 font-medium text-sm mb-1">🪝 Scroll-stopping hook:</p>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-blue-600 font-medium">
+                                Hook variant {(activeHookIndex[activePostTab] || 0) + 1} ud af {generatedPosts[activePostTab].hooks!.length}
+                              </span>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => navigateHook('prev')}
+                                  className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                  disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                                >
+                                  <ChevronLeft className="w-3 h-3 text-blue-600" />
+                                </button>
+                                <button
+                                  onClick={() => navigateHook('next')}
+                                  className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                  disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                                >
+                                  <ChevronRight className="w-3 h-3 text-blue-600" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                           <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
-                            {generatedPosts[activePostTab].hook}
+                            {generatedPosts[activePostTab].hooks![(activeHookIndex[activePostTab] || 0)]}
                           </p>
                         </div>
                       )}
