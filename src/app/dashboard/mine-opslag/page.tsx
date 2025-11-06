@@ -884,12 +884,15 @@ export default function MineOpslagPage() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as "all" | "published" | "scheduled" | "draft" | "failed" | "repost")}
-                    className="appearance-none px-4 py-2 pr-8 border border-gray-200 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-200 bg-white text-gray-900 text-base font-medium cursor-pointer hover:bg-gray-50 transition-colors h-10"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 8px center',
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-300 bg-white text-sm text-gray-900 appearance-none h-10"
+                    style={{ 
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                      backgroundPosition: 'right 0.5rem center',
                       backgroundRepeat: 'no-repeat',
-                      backgroundSize: '16px'
+                      backgroundSize: '1.5em 1.5em',
+                      paddingRight: '2.5rem',
+                      outline: 'none',
+                      boxShadow: 'none'
                     }}
                   >
                     <option value="all">Alle opslag</option>
@@ -1659,7 +1662,7 @@ export default function MineOpslagPage() {
                 value={repostComment}
                 onChange={(e) => setRepostComment(e.target.value)}
                 placeholder="Skriv en kommentar til dit genopslag..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 placeholder-gray-500"
                 rows={4}
                 maxLength={3000}
               />

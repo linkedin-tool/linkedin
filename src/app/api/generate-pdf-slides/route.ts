@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
 VIGTIGE RETNINGSLINJER:
 - Generer præcis ${slideCount} slides
-- Hver slide skal have kort, kraftfuldt indhold (max 2-3 korte sætninger)
+- MAKSIMALT ÉN SÆTNING PER SLIDE (eller meget kort pointe)
 - Indholdet skal være engagerende og LinkedIn-venligt
 - Brug actionable insights og værdifulde takeaways
 - Skriv på dansk
@@ -47,12 +47,15 @@ VIGTIGE RETNINGSLINJER:
 - Sidste slide kan være en call-to-action eller konklusion
 - Slides skal bygge på hinanden og fortælle en sammenhængende historie
 
-SLIDE INDHOLD:
-- Hold teksten kort og læsbar
+SLIDE INDHOLD - MEGET VIGTIGT:
+- MAKSIMALT 80 KARAKTERER PER SLIDE (inkl. mellemrum og tegnsætning)
+- MAKSIMALT 10-15 ORD PER SLIDE
 - Brug stærke, handlingsorienterede ord
 - Fokuser på værdi for læseren
-- Undgå lange sætninger
-- Gør det visuelt tiltalende når det læses
+- Kun ÉN hovedpointe per slide
+- Gør det visuelt impactfuldt - tænk store, fede statements
+- Undgå lange forklaringer - hver slide skal være en kraftfuld one-liner
+- TJEK ALTID at hver slide er under 80 karakterer
 
 OUTPUT FORMAT:
 Returner et JSON objekt med:

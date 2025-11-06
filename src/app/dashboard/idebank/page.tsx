@@ -1621,7 +1621,7 @@ export default function IdebankPage() {
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                       activeTab === 'content'
                         ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
                     <Type className="w-4 h-4 mr-2" />
@@ -1630,14 +1630,17 @@ export default function IdebankPage() {
                   {selectedIdea.ai_suggestions && selectedIdea.ai_suggestions.length > 0 && (
                     <button
                       onClick={() => setActiveTab('ai')}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors relative ${
                         activeTab === 'ai'
                           ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
                       <Lightbulb className="w-4 h-4 mr-2" />
                       AI Optimeringer
+                      <span className="absolute -top-2 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] shadow-sm">
+                        {selectedIdea.ai_suggestions.length}
+                      </span>
                     </button>
                   )}
                 </div>
@@ -1843,7 +1846,7 @@ export default function IdebankPage() {
                             ) : (
                               <>
                                 <Lightbulb className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm">Generer nye AI-forslag</span>
+                                <span className="text-sm">Generer flere AI-forslag</span>
                               </>
                             )}
                           </button>

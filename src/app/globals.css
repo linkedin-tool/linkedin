@@ -192,21 +192,46 @@ body {
   display: none;  /* Safari and Chrome */
 }
 
-/* Remove blue outlines/borders from all input and textarea elements */
+/* Remove ALL outlines/borders from form elements in ALL states */
+input,
+textarea,
+select,
+button {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 input:focus,
 textarea:focus,
-select:focus {
+select:focus,
+button:focus {
   outline: none !important;
   box-shadow: none !important;
   border-color: inherit !important;
 }
 
-/* Specifically target textarea to ensure no outline */
-textarea {
+input:active,
+textarea:active,
+select:active,
+button:active {
   outline: none !important;
+  box-shadow: none !important;
 }
 
-textarea:focus {
+input:hover,
+textarea:hover,
+select:hover {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Force remove any browser default focus styles */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+*:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -225,5 +250,321 @@ textarea:focus {
 }
 
 .focus\:shadow-none:focus {
+  box-shadow: none !important;
+}
+
+/* Override any focus ring utilities */
+.focus\:ring-2:focus,
+.focus\:ring-1:focus,
+.focus\:ring:focus {
+  box-shadow: none !important;
+}
+
+/* Remove focus rings from all elements */
+.focus\:ring-blue-500:focus,
+.focus\:ring-gray-500:focus,
+.focus\:ring-indigo-500:focus {
+  box-shadow: none !important;
+}
+
+
+/* Aggressive outline removal for dropdowns and inputs */
+select,
+input[type="text"],
+input[type="number"] {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+}
+
+select:focus,
+input[type="text"]:focus,
+input[type="number"]:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+/* Browser-specific outline removal */
+select::-moz-focus-inner,
+input::-moz-focus-inner {
+  border: 0 !important;
+  outline: none !important;
+}
+
+/* ULTRA AGGRESSIVE outline removal - highest specificity */
+select[class*="w-full"],
+input[class*="w-full"],
+textarea[class*="w-full"] {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-style: solid !important;
+}
+
+select[class*="w-full"]:focus,
+input[class*="w-full"]:focus,
+textarea[class*="w-full"]:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: #d1d5db !important;
+}
+
+/* Target specific elements by their classes */
+.focus\:outline-none,
+.focus\:border-gray-300 {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+}
+
+.focus\:outline-none:focus,
+.focus\:border-gray-300:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* GLOBAL outline removal for ALL form elements and interactive elements */
+input,
+textarea,
+select,
+button,
+[role="button"],
+[role="combobox"],
+[role="listbox"],
+[role="option"],
+[contenteditable],
+.focus\:outline-none,
+.focus\:ring-0,
+.focus\:border-gray-300,
+.focus\:border-gray-400 {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+}
+
+/* ALL focus states */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus,
+[role="button"]:focus,
+[role="combobox"]:focus,
+[role="listbox"]:focus,
+[role="option"]:focus,
+[contenteditable]:focus,
+.focus\:outline-none:focus,
+.focus\:ring-0:focus,
+.focus\:border-gray-300:focus,
+.focus\:border-gray-400:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ALL focus-visible states */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[role="combobox"]:focus-visible,
+[role="listbox"]:focus-visible,
+[role="option"]:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Target all possible input types */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"],
+input[type="week"] {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="month"]:focus,
+input[type="time"]:focus,
+input[type="week"]:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Nuclear option - remove ALL outlines from ALL elements */
+* {
+  outline: none !important;
+}
+
+*:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+}
+
+*:focus-visible {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+}
+
+/* PRESERVE ring styles for color picker buttons - HIGHEST SPECIFICITY */
+.ring-2.ring-gray-900 {
+  box-shadow: 0 0 0 2px rgb(17 24 39) !important;
+}
+
+.ring-2.ring-gray-900.ring-offset-2 {
+  box-shadow: 0 0 0 2px rgb(255 255 255), 0 0 0 4px rgb(17 24 39) !important;
+}
+
+/* Ensure color picker buttons keep their visual indicators */
+button.ring-2.ring-gray-900,
+button.ring-2.ring-gray-900.ring-offset-2 {
+  box-shadow: 0 0 0 2px rgb(255 255 255), 0 0 0 4px rgb(17 24 39) !important;
+}
+
+/* EXTRA AGGRESSIVE - Remove ALL possible rings and outlines */
+select:active,
+select[aria-expanded="true"],
+select[data-state="open"],
+button:active,
+button[aria-expanded="true"],
+button[data-state="open"],
+[role="combobox"]:active,
+[role="combobox"][aria-expanded="true"],
+[role="combobox"][data-state="open"] {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+/* Target specific Tailwind ring utilities that might be applied */
+.ring,
+.ring-1,
+.ring-2,
+.ring-4,
+.ring-8,
+.ring-inset,
+.ring-blue-500,
+.ring-gray-500,
+.ring-indigo-500,
+.ring-slate-500,
+.ring-zinc-500,
+.ring-neutral-500,
+.ring-stone-500,
+.ring-red-500,
+.ring-orange-500,
+.ring-amber-500,
+.ring-yellow-500,
+.ring-lime-500,
+.ring-green-500,
+.ring-emerald-500,
+.ring-teal-500,
+.ring-cyan-500,
+.ring-sky-500,
+.ring-violet-500,
+.ring-purple-500,
+.ring-fuchsia-500,
+.ring-pink-500,
+.ring-rose-500 {
+  box-shadow: none !important;
+}
+
+/* Exception: ONLY allow rings on color picker buttons */
+button.ring-2.ring-gray-900:not(.ring-blue-500):not(.ring-gray-500) {
+  box-shadow: 0 0 0 2px rgb(17 24 39) !important;
+}
+
+button.ring-2.ring-gray-900.ring-offset-2:not(.ring-blue-500):not(.ring-gray-500) {
+  box-shadow: 0 0 0 2px rgb(255 255 255), 0 0 0 4px rgb(17 24 39) !important;
+}
+
+/* EXTRA SPECIFIC: Target dropdown selects with appearance-none class */
+select.appearance-none,
+select[class*="appearance-none"] {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+select.appearance-none:focus,
+select[class*="appearance-none"]:focus {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: #d1d5db !important;
+}
+
+select.appearance-none:active,
+select[class*="appearance-none"]:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
   box-shadow: none !important;
 }
