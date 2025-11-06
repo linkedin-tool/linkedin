@@ -19,7 +19,8 @@ import {
   Brain,
   Lightbulb,
   Plus,
-  Bell
+  Bell,
+  FileImage
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { LinkedInNotificationBanner } from '@/components/LinkedInNotificationBanner'
@@ -259,6 +260,12 @@ export default function DashboardLayout({
       current: pathname === '/dashboard/idebank' 
     },
     { 
+      name: 'PDF Generator', 
+      href: '/dashboard/pdf-generator', 
+      icon: FileImage,
+      current: pathname === '/dashboard/pdf-generator' 
+    },
+    { 
       name: 'Træn din AI', 
       href: '/dashboard/train-ai', 
       icon: Brain,
@@ -434,6 +441,14 @@ export default function DashboardLayout({
                   >
                     <Lightbulb className="w-4 h-4 mr-3 text-gray-400" />
                     Ny idé
+                  </Link>
+                  <Link
+                    href="/dashboard/pdf-generator"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setCreateDropdownOpen(false)}
+                  >
+                    <FileImage className="w-4 h-4 mr-3 text-gray-400" />
+                    PDF Karussel
                   </Link>
                 </div>
               )}

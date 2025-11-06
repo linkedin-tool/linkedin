@@ -129,9 +129,12 @@ export type Database = {
           ai_title: string | null
           content: string
           created_at: string | null
+          hidden_suggestions: number[] | null
           id: string
           image_url: string | null
           original_audio_url: string | null
+          resume: string | null
+          saved_notes: string[] | null
           title: string | null
           transcribed_text: string | null
           type: string
@@ -144,9 +147,12 @@ export type Database = {
           ai_title?: string | null
           content: string
           created_at?: string | null
+          hidden_suggestions?: number[] | null
           id?: string
           image_url?: string | null
           original_audio_url?: string | null
+          resume?: string | null
+          saved_notes?: string[] | null
           title?: string | null
           transcribed_text?: string | null
           type: string
@@ -159,9 +165,12 @@ export type Database = {
           ai_title?: string | null
           content?: string
           created_at?: string | null
+          hidden_suggestions?: number[] | null
           id?: string
           image_url?: string | null
           original_audio_url?: string | null
+          resume?: string | null
+          saved_notes?: string[] | null
           title?: string | null
           transcribed_text?: string | null
           type?: string
@@ -365,6 +374,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pdf_carousels: {
+        Row: {
+          created_at: string | null
+          filename: string
+          id: string
+          public_url: string | null
+          slide_count: number
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          filename: string
+          id?: string
+          public_url?: string | null
+          slide_count?: number
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          filename?: string
+          id?: string
+          public_url?: string | null
+          slide_count?: number
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_carousels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {

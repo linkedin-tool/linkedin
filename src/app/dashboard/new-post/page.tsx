@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import { PlusCircle, Image, CheckCircle, AlertCircle, Calendar, Edit, FileEdit, Send, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
 
@@ -30,6 +30,8 @@ export default function NewPostPage() {
   const [hooks, setHooks] = useState<string[]>([]);
   const [activeHookIndex, setActiveHookIndex] = useState(0);
   const [generatingHooks, setGeneratingHooks] = useState(false);
+  const [isEditingHook, setIsEditingHook] = useState(false);
+  const [editingHookText, setEditingHookText] = useState("");
   
   // Posts generation states
   const [generatingPosts, setGeneratingPosts] = useState(false);
@@ -41,6 +43,8 @@ export default function NewPostPage() {
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [completedPosts, setCompletedPosts] = useState<Set<string>>(new Set());
   const [completedHooks, setCompletedHooks] = useState<Set<string>>(new Set());
+  const [isEditingPostHook, setIsEditingPostHook] = useState(false);
+  const [editingPostHookText, setEditingPostHookText] = useState("");
 
   // Funktion til at få den korrekte return URL
   const getReturnUrl = () => {
@@ -151,6 +155,62 @@ export default function NewPostPage() {
     }
     
     setActiveHookIndex(newIndex);
+  };
+
+  // Start hook editing
+  const startEditingHook = () => {
+    if (hooks.length > 0 && hooks[activeHookIndex]) {
+      setEditingHookText(hooks[activeHookIndex]);
+      setIsEditingHook(true);
+    }
+  };
+
+  // Save hook changes
+  const saveHookChanges = () => {
+    if (editingHookText.trim()) {
+      const updatedHooks = [...hooks];
+      updatedHooks[activeHookIndex] = editingHookText.trim();
+      setHooks(updatedHooks);
+    }
+    setIsEditingHook(false);
+    setEditingHookText("");
+  };
+
+  // Cancel hook editing
+  const cancelHookEditing = () => {
+    setIsEditingHook(false);
+    setEditingHookText("");
+  };
+
+  // Start editing post hook in modal
+  const startEditingPostHook = () => {
+    const currentPost = generatedPosts[activePostTab];
+    if (currentPost?.hooks && currentPost.hooks.length > 0) {
+      const currentHookIndex = activePostHookIndex[activePostTab] || 0;
+      setEditingPostHookText(currentPost.hooks[currentHookIndex]);
+      setIsEditingPostHook(true);
+    }
+  };
+
+  // Save post hook changes
+  const savePostHookChanges = () => {
+    if (editingPostHookText.trim()) {
+      const updatedPosts = [...generatedPosts];
+      const currentPost = updatedPosts[activePostTab];
+      if (currentPost?.hooks) {
+        const currentHookIndex = activePostHookIndex[activePostTab] || 0;
+        currentPost.hooks[currentHookIndex] = editingPostHookText.trim();
+        setGeneratedPosts(updatedPosts);
+      }
+    }
+    setIsEditingPostHook(false);
+    setEditingPostHookText("");
+  };
+
+  // Cancel post hook editing
+  const cancelPostHookEditing = () => {
+    setIsEditingPostHook(false);
+    setEditingPostHookText("");
   };
 
   // Generer hooks baseret på opslag-tekst
@@ -432,6 +492,8 @@ export default function NewPostPage() {
     setProgressPercentage(0);
     setCompletedPosts(new Set());
     setCompletedHooks(new Set());
+    setIsEditingPostHook(false);
+    setEditingPostHookText("");
     
     Swal.fire({
       title: '✅ Opslag valgt!',
@@ -612,6 +674,11 @@ export default function NewPostPage() {
           }
           
           setStatus(statusMessage);
+          
+          // Naviger tilbage til Mine Opslag efter kort pause
+          setTimeout(() => {
+            window.location.href = "/dashboard/mine-opslag";
+          }, 2000);
         } else {
           // Øjeblikkelig udgivelse
           let successText = 'Dit LinkedIn opslag er blevet udgivet med det samme.';
@@ -741,7 +808,7 @@ export default function NewPostPage() {
         </p>
       </div>
 
-      <div className="max-w-4xl">
+      <div className="max-w-4xl sm:mx-auto">
         {/* Status Messages */}
         {status && (
           <Card className={`p-6 mb-6 ${
@@ -805,7 +872,7 @@ export default function NewPostPage() {
         )}
 
         {/* Main Post Creation Card */}
-        <Card className="p-8 bg-white border border-gray-200 shadow-sm">
+        <div className="sm:bg-white sm:border sm:border-gray-200 sm:shadow-sm sm:rounded-lg sm:p-8 py-6">
           <div className="flex items-center gap-3 mb-6">
             {isEditMode ? (
               <Edit className="h-6 w-6 text-blue-600" />
@@ -820,26 +887,79 @@ export default function NewPostPage() {
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Hook Section */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-base font-medium text-gray-700">
-                  🪝 Scroll-stopping hook (valgfrit)
-                </label>
-                <button
-                  type="button"
-                  onClick={generateHooks}
-                  disabled={generatingHooks || !text.trim()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  {generatingHooks ? 'Genererer...' : 'Generer 3 hooks'}
-                </button>
-              </div>
+              {hooks.length === 0 && (
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-base font-medium text-gray-700">
+                    🪝 Scroll-stopping hook
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateHooks}
+                    disabled={generatingHooks || !text.trim()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {generatingHooks ? 'Genererer...' : 'Generer 3 hooks'}
+                  </button>
+                </div>
+              )}
+              
+              {hooks.length > 0 && (
+                <div className="flex items-center justify-between mb-3 sm:hidden">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 font-medium">
+                      Hook variant {activeHookIndex + 1} ud af {hooks.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => navigateHook('prev')}
+                        className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                        disabled={hooks.length <= 1 || isEditingHook}
+                      >
+                        <ChevronLeft className="w-3 h-3 text-blue-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigateHook('next')}
+                        className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                        disabled={hooks.length <= 1 || isEditingHook}
+                      >
+                        <ChevronRight className="w-3 h-3 text-blue-600" />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateHooks}
+                    disabled={generatingHooks || !text.trim()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {generatingHooks ? 'Genererer...' : 'Generer 3 hooks'}
+                  </button>
+                </div>
+              )}
+              
+              {hooks.length > 0 && (
+                <div className="hidden sm:flex justify-end mb-3">
+                  <button
+                    type="button"
+                    onClick={generateHooks}
+                    disabled={generatingHooks || !text.trim()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {generatingHooks ? 'Genererer...' : 'Generer 3 hooks'}
+                  </button>
+                </div>
+              )}
               
               {hooks.length > 0 ? (
-                <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg relative">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-blue-900 font-medium text-sm">🪝 Scroll-stopping hook:</p>
-                    <div className="flex items-center gap-2">
+                    <div className="hidden sm:flex items-center gap-2">
                       <span className="text-xs text-blue-600 font-medium">
                         Hook variant {activeHookIndex + 1} ud af {hooks.length}
                       </span>
@@ -848,7 +968,7 @@ export default function NewPostPage() {
                           type="button"
                           onClick={() => navigateHook('prev')}
                           className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                          disabled={hooks.length <= 1}
+                          disabled={hooks.length <= 1 || isEditingHook}
                         >
                           <ChevronLeft className="w-3 h-3 text-blue-600" />
                         </button>
@@ -856,16 +976,58 @@ export default function NewPostPage() {
                           type="button"
                           onClick={() => navigateHook('next')}
                           className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                          disabled={hooks.length <= 1}
+                          disabled={hooks.length <= 1 || isEditingHook}
                         >
                           <ChevronRight className="w-3 h-3 text-blue-600" />
                         </button>
                       </div>
                     </div>
                   </div>
-                  <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
-                    {hooks[activeHookIndex]}
-                  </p>
+                  
+                  {isEditingHook ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editingHookText}
+                        onChange={(e) => setEditingHookText(e.target.value)}
+                        className="w-full p-3 border-0 rounded-lg bg-white text-blue-800 font-semibold leading-relaxed resize-none focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none"
+                        rows={3}
+                        placeholder="Rediger din hook..."
+                      />
+                      <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={cancelHookEditing}
+                          className="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors order-2 sm:order-1 border border-gray-300"
+                        >
+                          Annuller
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveHookChanges}
+                          className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors order-1 sm:order-2"
+                        >
+                          Gem
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pr-12">
+                      <p className="text-lg text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                        {hooks[activeHookIndex]}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!isEditingHook && (
+                    <button
+                      type="button"
+                      onClick={startEditingHook}
+                      className="absolute bottom-3 right-3 p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                      title="Rediger hook"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
@@ -877,43 +1039,26 @@ export default function NewPostPage() {
               )}
             </div>
 
-            <div>
-              <div className="mb-2">
-                {/* Mobile layout - vertical stacking */}
-                <div className="sm:hidden">
-                  <label htmlFor="text" className="block text-base font-medium text-gray-700 mb-2">
-                    Opslag tekst
-                  </label>
-                  <div className="flex justify-end mb-2">
-                    <VoiceRecorder 
-                      onTranscription={(transcribedText) => setText(transcribedText)}
-                    />
-                  </div>
-                </div>
-
-                {/* Desktop layout - side by side */}
-                <div className="hidden sm:flex sm:items-center sm:justify-between mb-2">
-                  <label htmlFor="text" className="block text-base font-medium text-gray-700">
-                    Opslag tekst
-                  </label>
-                  <VoiceRecorder 
-                    onTranscription={(transcribedText) => setText(transcribedText)}
-                  />
-                </div>
+            <div className="mt-12">
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="text" className="block text-base font-medium text-gray-700">
+                  Opslag tekst
+                </label>
+                <VoiceRecorder 
+                  onTranscription={(transcribedText) => setText(transcribedText)}
+                />
               </div>
               <textarea
                 id="text"
-                className="w-full border-2 border-gray-200 rounded-2xl p-4 min-h-[240px] text-base text-gray-900 resize-y focus:border-gray-200 focus:outline-none focus:ring-0 focus:shadow-none transition-colors"
+                className="w-full border-2 border-gray-200 rounded-2xl p-4 min-h-[240px] text-lg text-gray-900 resize-y focus:border-gray-200 focus:outline-none focus:ring-0 focus:shadow-none transition-colors"
+                style={{ outline: 'none', boxShadow: 'none' }}
                 placeholder="Skriv dit opslag her... Del dine tanker, opdateringer eller indsigter med dit LinkedIn-netværk."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 required
                 disabled={isSubmitting}
               />
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-sm text-gray-500">
-                  Tip: Brug hashtags og tag relevante personer for at øge rækkevidden.
-                </p>
+              <div className="flex justify-end mt-2">
                 <button
                   type="button"
                   onClick={generateLinkedInPosts}
@@ -1062,91 +1207,197 @@ export default function NewPostPage() {
             </div>
 
 
-            <div className="pt-4 flex flex-wrap gap-4">
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !text.trim()} 
-                className="px-8 h-11 bg-blue-600 hover:bg-blue-700"
-              >
-                {isEditMode ? (
-                  <Edit className="w-4 h-4" />
-                ) : (
-                  <PlusCircle className="w-4 h-4" />
-                )}
-                {isSubmitting 
-                  ? (isEditMode ? "Gemmer..." : "Udgiver...") 
-                  : (isEditMode ? "Gem ændringer" : "Udgiv nu")
-                }
-              </Button>
-              
-              {!isEditMode && (
-                <>
-                  <Button 
-                    type="button"
-                    onClick={() => setShowScheduleModal(true)}
-                    disabled={isSubmitting || !text.trim()} 
-                    variant="outline"
-                    className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Planlæg
-                  </Button>
-                  
-                  <Button 
-                    type="button"
-                    onClick={(e) => onSubmit(e, "draft")}
-                    disabled={isSubmitting || !text.trim()} 
-                    variant="outline"
-                    className="px-8 h-11 border-gray-600 text-gray-600 hover:bg-gray-50"
-                  >
-                    <FileEdit className="w-4 h-4" />
-                    Gem som kladde
-                  </Button>
-                </>
-              )}
-              
-              {isEditMode && scheduledDate && scheduledTime && (
+            <div className="pt-4">
+              {/* Desktop layout - horizontal */}
+              <div className="hidden sm:flex flex-wrap gap-4">
                 <Button 
-                  type="button"
-                  onClick={() => setShowScheduleModal(true)}
+                  type="submit" 
                   disabled={isSubmitting || !text.trim()} 
-                  variant="outline"
-                  className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="px-8 h-11 bg-blue-600 hover:bg-blue-700"
                 >
-                  <Calendar className="w-4 h-4" />
-                  Ændre planlagt tid
+                  {isEditMode ? (
+                    <Edit className="w-4 h-4" />
+                  ) : (
+                    <PlusCircle className="w-4 h-4" />
+                  )}
+                  {isSubmitting 
+                    ? (isEditMode ? "Gemmer..." : "Udgiver...") 
+                    : (isEditMode ? "Gem ændringer" : "Udgiv nu")
+                  }
                 </Button>
-              )}
+                
+                {!isEditMode && (
+                  <>
+                    <Button 
+                      type="button"
+                      onClick={() => setShowScheduleModal(true)}
+                      disabled={isSubmitting || !text.trim()} 
+                      variant="outline"
+                      className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Planlæg
+                    </Button>
+                    
+                    <Button 
+                      type="button"
+                      onClick={(e) => onSubmit(e, "draft")}
+                      disabled={isSubmitting || !text.trim()} 
+                      variant="outline"
+                      className="px-8 h-11 border-gray-600 text-gray-600 hover:bg-gray-50"
+                    >
+                      <FileEdit className="w-4 h-4" />
+                      Gem som kladde
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Mobile layout - stacked */}
+              <div className="sm:hidden space-y-3">
+                {!isEditMode ? (
+                  <>
+                    {/* First row: Udgiv nu + Planlæg */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting || !text.trim()} 
+                        className="h-11 bg-blue-600 hover:bg-blue-700 text-sm"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        {isSubmitting ? "Udgiver..." : "Udgiv nu"}
+                      </Button>
+                      
+                      <Button 
+                        type="button"
+                        onClick={() => setShowScheduleModal(true)}
+                        disabled={isSubmitting || !text.trim()} 
+                        variant="outline"
+                        className="h-11 border-blue-600 text-blue-600 hover:bg-blue-50 text-sm"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Planlæg
+                      </Button>
+                    </div>
+                    
+                    {/* Second row: Gem som kladde (full width) */}
+                    <Button 
+                      type="button"
+                      onClick={(e) => onSubmit(e, "draft")}
+                      disabled={isSubmitting || !text.trim()} 
+                      variant="outline"
+                      className="w-full h-11 border-gray-600 text-gray-600 hover:bg-gray-50 text-sm"
+                    >
+                      <FileEdit className="w-4 h-4" />
+                      Gem som kladde
+                    </Button>
+                  </>
+                ) : (
+                  /* Edit mode - single button full width */
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || !text.trim()} 
+                    className="w-full h-11 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Edit className="w-4 h-4" />
+                    {isSubmitting ? "Gemmer..." : "Gem ændringer"}
+                  </Button>
+                )}
+              </div>
               
-              {/* Ekstra muligheder for kladder i edit mode */}
-              {isEditMode && editPostStatus === 'draft' && (
-                <>
-                  <Button 
-                    type="button"
-                    onClick={(e) => onSubmit(e, "now")}
-                    disabled={isSubmitting || !text.trim()} 
-                    variant="outline"
-                    className="px-8 h-11 border-green-600 text-green-600 hover:bg-green-50"
-                  >
-                    <Send className="w-4 h-4" />
-                    Udgiv nu
-                  </Button>
-                  
-                  <Button 
-                    type="button"
-                    onClick={() => setShowScheduleModal(true)}
-                    disabled={isSubmitting || !text.trim()} 
-                    variant="outline"
-                    className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Planlæg opslag
-                  </Button>
-                </>
+              {/* Extra buttons for edit mode */}
+              {isEditMode && (scheduledDate && scheduledTime || editPostStatus === 'draft') && (
+                <div className="mt-4">
+                  {/* Desktop layout for edit mode extra buttons */}
+                  <div className="hidden sm:flex flex-wrap gap-4">
+                    {scheduledDate && scheduledTime && (
+                      <Button 
+                        type="button"
+                        onClick={() => setShowScheduleModal(true)}
+                        disabled={isSubmitting || !text.trim()} 
+                        variant="outline"
+                        className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Ændre planlagt tid
+                      </Button>
+                    )}
+                    
+                    {editPostStatus === 'draft' && (
+                      <>
+                        <Button 
+                          type="button"
+                          onClick={(e) => onSubmit(e, "now")}
+                          disabled={isSubmitting || !text.trim()} 
+                          variant="outline"
+                          className="px-8 h-11 border-green-600 text-green-600 hover:bg-green-50"
+                        >
+                          <Send className="w-4 h-4" />
+                          Udgiv nu
+                        </Button>
+                        
+                        <Button 
+                          type="button"
+                          onClick={() => setShowScheduleModal(true)}
+                          disabled={isSubmitting || !text.trim()} 
+                          variant="outline"
+                          className="px-8 h-11 border-blue-600 text-blue-600 hover:bg-blue-50"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Planlæg opslag
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Mobile layout for edit mode extra buttons */}
+                  <div className="sm:hidden space-y-3">
+                    {scheduledDate && scheduledTime && (
+                      <Button 
+                        type="button"
+                        onClick={() => setShowScheduleModal(true)}
+                        disabled={isSubmitting || !text.trim()} 
+                        variant="outline"
+                        className="w-full h-11 border-blue-600 text-blue-600 hover:bg-blue-50 text-sm"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Ændre planlagt tid
+                      </Button>
+                    )}
+                    
+                    {editPostStatus === 'draft' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button 
+                            type="button"
+                            onClick={(e) => onSubmit(e, "now")}
+                            disabled={isSubmitting || !text.trim()} 
+                            variant="outline"
+                            className="h-11 border-green-600 text-green-600 hover:bg-green-50 text-sm"
+                          >
+                            <Send className="w-4 h-4" />
+                            Udgiv nu
+                          </Button>
+                          
+                          <Button 
+                            type="button"
+                            onClick={() => setShowScheduleModal(true)}
+                            disabled={isSubmitting || !text.trim()} 
+                            variant="outline"
+                            className="h-11 border-blue-600 text-blue-600 hover:bg-blue-50 text-sm"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            Planlæg
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </form>
-        </Card>
+        </div>
 
       </div>
 
@@ -1257,6 +1508,8 @@ export default function NewPostPage() {
           setProgressPercentage(0);
           setCompletedPosts(new Set());
           setCompletedHooks(new Set());
+          setIsEditingPostHook(false);
+          setEditingPostHookText("");
         }}
         className="max-w-3xl h-[70vh]"
         title="3 Genererede LinkedIn Opslag"
@@ -1294,7 +1547,7 @@ export default function NewPostPage() {
                       type="button"
                       onClick={() => navigatePostHook('prev')}
                       className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                      disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                      disabled={generatedPosts[activePostTab].hooks!.length <= 1 || isEditingPostHook}
                     >
                       <ChevronLeft className="w-3 h-3 text-blue-600" />
                     </button>
@@ -1302,7 +1555,7 @@ export default function NewPostPage() {
                       type="button"
                       onClick={() => navigatePostHook('next')}
                       className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                      disabled={generatedPosts[activePostTab].hooks!.length <= 1}
+                      disabled={generatedPosts[activePostTab].hooks!.length <= 1 || isEditingPostHook}
                     >
                       <ChevronRight className="w-3 h-3 text-blue-600" />
                     </button>
@@ -1314,11 +1567,53 @@ export default function NewPostPage() {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto pr-2">
               {generatedPosts[activePostTab].hooks && generatedPosts[activePostTab].hooks!.length > 0 && (
-                <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg relative">
                   <p className="text-blue-900 font-medium text-sm mb-3">🪝 Scroll-stopping hook:</p>
-                  <p className="text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
-                    {generatedPosts[activePostTab].hooks![(activePostHookIndex[activePostTab] || 0)]}
-                  </p>
+                  
+                  {isEditingPostHook ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editingPostHookText}
+                        onChange={(e) => setEditingPostHookText(e.target.value)}
+                        className="w-full p-3 border-0 rounded-lg bg-white text-blue-800 font-semibold leading-relaxed resize-none focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none"
+                        rows={3}
+                        placeholder="Rediger din hook..."
+                      />
+                      <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={cancelPostHookEditing}
+                          className="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors order-2 sm:order-1 border border-gray-300"
+                        >
+                          Annuller
+                        </button>
+                        <button
+                          type="button"
+                          onClick={savePostHookChanges}
+                          className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors order-1 sm:order-2"
+                        >
+                          Gem
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pr-12">
+                      <p className="text-lg text-blue-800 whitespace-pre-wrap leading-relaxed font-semibold">
+                        {generatedPosts[activePostTab].hooks![(activePostHookIndex[activePostTab] || 0)]}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!isEditingPostHook && (
+                    <button
+                      type="button"
+                      onClick={startEditingPostHook}
+                      className="absolute bottom-3 right-3 p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                      title="Rediger hook"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               )}
               

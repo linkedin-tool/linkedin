@@ -3,7 +3,8 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Type, Image as ImageIcon, Upload, FileText, Lightbulb, Loader2, Square } from "lucide-react";
+import { Modal } from "@/components/ui/modal";
+import { Mic, Type, Image as ImageIcon, Upload, FileText, Lightbulb, Loader2, Square } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 
@@ -17,6 +18,15 @@ export default function NyIdePage() {
   const [imageDescription, setImageDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  
+  // Matching modal states
+  const [showMatchingModal, setShowMatchingModal] = useState(false);
+  const [cleanedText, setCleanedText] = useState("");
+  const [matchedIdeas, setMatchedIdeas] = useState<Array<{id: string, title: string | null, ai_title: string | null, resume: string | null, score: number}>>([]);
+  const [allExistingIdeas, setAllExistingIdeas] = useState<Array<{id: string, title: string | null, ai_title: string | null, resume: string | null}>>([]);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+  const [addingToExisting, setAddingToExisting] = useState(false);
+  const [creatingNew, setCreatingNew] = useState(false);
   
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -107,7 +117,26 @@ export default function NyIdePage() {
       const result = await response.json();
 
       if (result.success) {
-        await handleVoiceTranscription(result.text);
+        // Call intelligent matching API
+        const matchResponse = await fetch('/api/match-ideas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            transcribedText: result.text
+          }),
+        });
+
+        const matchResult = await matchResponse.json();
+
+        if (matchResult.success) {
+          await handleVoiceTranscriptionWithMatches(matchResult.cleanedText, matchResult.matches, matchResult.allIdeas);
+        } else {
+          console.error('Matching fejlede:', matchResult.error);
+          // Fallback to original flow if matching fails
+          await handleVoiceTranscription(result.text);
+        }
       } else {
         console.error('Transskription fejlede:', result.error);
         await Swal.fire({
@@ -238,6 +267,177 @@ export default function NyIdePage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle voice transcription with intelligent matching
+  const handleVoiceTranscriptionWithMatches = async (
+    cleanedText: string, 
+    matches: Array<{id: string, title: string | null, ai_title: string | null, resume: string | null, score: number}>,
+    allIdeas: Array<{id: string, title: string | null, ai_title: string | null, resume: string | null}>
+  ) => {
+    if (!cleanedText.trim()) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Ingen tekst',
+        text: 'Der blev ikke registreret nogen tekst fra optagelsen.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    setCleanedText(cleanedText);
+    setMatchedIdeas(matches);
+    setAllExistingIdeas(allIdeas);
+
+    // Always show the matching modal (even if no matches)
+    if (matches.length > 0) {
+      setSelectedIdeaId(matches[0].id); // Default to highest scoring match
+    } else {
+      setSelectedIdeaId(null); // No default selection if no matches
+    }
+    setShowMatchingModal(true);
+  };
+
+  // Create new idea (extracted from handleVoiceTranscription)
+  const createNewIdea = async (content: string) => {
+    try {
+      setCreatingNew(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Ikke logget ind");
+      }
+
+      // Opret idé i databasen
+      const { data: ideaData, error } = await supabase
+        .from("ideas")
+        .insert({
+          user_id: user.id,
+          content: content,
+          type: 'voice',
+          transcribed_text: content,
+          ai_suggestions_status: 'pending'
+        })
+        .select('id')
+        .single() as { data: { id: string } | null; error: any };
+
+      if (error) throw error;
+
+      // Generer AI-forslag i baggrunden
+      if (ideaData?.id) {
+        generateAISuggestionsInBackground(ideaData.id, content, 'voice');
+      }
+
+      // Vis success besked
+      await Swal.fire({
+        title: 'Idé gemt!',
+        text: 'Din indtale idé er blevet gemt i idébanken. AI-forslag genereres i baggrunden.',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+      // Naviger til idébank
+      router.push('/dashboard/idebank');
+
+    } catch (error) {
+      console.error('Error saving voice idea:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl',
+        text: 'Der opstod en fejl ved gemning af idéen. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+    } finally {
+      setCreatingNew(false);
+    }
+  };
+
+  // Add to existing idea
+  const addToExistingIdea = async () => {
+    if (!selectedIdeaId || !cleanedText.trim()) return;
+
+    try {
+      setAddingToExisting(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Ikke logget ind");
+      }
+
+      // Get the existing idea
+      const { data: existingIdea, error: fetchError } = await supabase
+        .from('ideas')
+        .select('content, transcribed_text, type')
+        .eq('id', selectedIdeaId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Determine which field to update based on type
+      const currentContent = existingIdea.type === 'voice' && existingIdea.transcribed_text 
+        ? existingIdea.transcribed_text 
+        : existingIdea.content;
+
+      // Append new content with double line break
+      const updatedContent = currentContent + '\n\n' + cleanedText;
+
+      // Update the appropriate field and set updated_at timestamp
+      const updateData = existingIdea.type === 'voice' && existingIdea.transcribed_text
+        ? { transcribed_text: updatedContent, updated_at: new Date().toISOString() }
+        : { content: updatedContent, updated_at: new Date().toISOString() };
+
+      const { error: updateError } = await supabase
+        .from('ideas')
+        .update(updateData)
+        .eq('id', selectedIdeaId);
+
+      if (updateError) throw updateError;
+
+      // Close modal and show success
+      setShowMatchingModal(false);
+      
+      await Swal.fire({
+        title: 'Tilføjet til idé!',
+        text: 'Din nye tekst er blevet tilføjet til den eksisterende idé.',
+        icon: 'success',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: false,
+        toast: true,
+        showClass: {
+          popup: 'swal2-toast-fade-in'
+        },
+        hideClass: {
+          popup: 'swal2-toast-fade-out'
+        },
+        position: 'top-end'
+      });
+
+      // Naviger til idébank
+      router.push('/dashboard/idebank');
+
+    } catch (error) {
+      console.error('Error adding to existing idea:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Fejl',
+        text: 'Der opstod en fejl ved tilføjelse til idéen. Prøv igen.',
+        confirmButtonColor: '#dc2626'
+      });
+    } finally {
+      setAddingToExisting(false);
     }
   };
 
@@ -389,7 +589,7 @@ export default function NyIdePage() {
       id: 'voice' as TabType,
       name: 'Indtal',
       icon: Mic,
-      description: 'Indtal din idé med mikrofonen'
+      description: 'Indtal dine tanker og idéer'
     },
     {
       id: 'text' as TabType,
@@ -408,8 +608,9 @@ export default function NyIdePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Ny Idé</h1>
-        <p className="text-lg text-gray-600">Gem dine idéer hurtigt og nemt - enten ved at indtale, skrive eller uploade et billede.</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Opret ny idé</h1>
+        <p className="text-lg text-gray-600">Fang dine tanker, mens de er friske.</p>
+        <p className="text-lg text-gray-600">Skriv eller indtal på farten – og byg videre senere.</p>
       </div>
 
       <div className="max-w-4xl mx-auto">
@@ -440,21 +641,18 @@ export default function NyIdePage() {
           </div>
         </div>
 
-        {/* Tab Description */}
-        <div className="text-center mb-8">
-          <p className="text-gray-600">
-            {tabs.find(tab => tab.id === activeTab)?.description}
-          </p>
-        </div>
 
         {/* Tab Content */}
-        <Card className="p-8 bg-white border border-gray-200 shadow-sm">
+        <Card className="p-8 bg-white border border-gray-200 shadow-sm rounded-2xl">
           {activeTab === 'voice' && (
             <div className="text-center space-y-6">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Indtal din idé</h3>
+                <p className="text-gray-600 mb-2">
+                  Sig, hvad du tænker – hurtigt og spontant.
+                </p>
                 <p className="text-gray-600 mb-8">
-                  Klik på mikrofon-knappen for at starte optagelsen. Tal naturligt og din tale vil automatisk blive transskriberet og gemt som en idé.
+                  Vil du tilføje til en eksisterende idé? Sig f.eks. &quot;Tilføj til min refleksion om ledelse...&quot;
                 </p>
               </div>
 
@@ -493,7 +691,7 @@ export default function NyIdePage() {
                 ) : isRecording ? (
                   <span className="text-red-600 font-medium">Optager - klik for at stoppe</span>
                 ) : (
-                  <span>Klik på mikrofonen for at starte</span>
+                  <span>Klik for at starte optagelse</span>
                 )}
               </div>
 
@@ -668,6 +866,123 @@ export default function NyIdePage() {
           )}
         </Card>
       </div>
+
+      {/* Matching Modal */}
+      {showMatchingModal && (
+        <Modal
+          isOpen={showMatchingModal}
+          onClose={() => setShowMatchingModal(false)}
+          title="Hvordan vil du gemme idéen?"
+        >
+          <div className="space-y-6">
+            {/* Preview of cleaned text */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Din rensede tekst:</h4>
+              <p className="text-gray-900 text-sm whitespace-pre-wrap">{cleanedText}</p>
+            </div>
+
+            {/* Dropdown for selecting idea */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vælg eksisterende idé eller opret ny:
+              </label>
+              <select
+                value={selectedIdeaId || ""}
+                onChange={(e) => setSelectedIdeaId(e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none bg-white text-gray-900 appearance-none"
+                style={{ 
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
+              >
+                {/* Default option when no selection */}
+                <option value="">Vælg en idé</option>
+                
+                {/* Matched ideas first (with score) */}
+                {matchedIdeas.length > 0 && (
+                  <optgroup label="🎯 Foreslåede matches">
+                    {matchedIdeas.map((idea) => (
+                      <option key={idea.id} value={idea.id}>
+                        {idea.ai_title || idea.title || 'Ingen titel'} 
+                        {` (${Math.round(idea.score * 100)}% match)`}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                
+                {/* All other existing ideas */}
+                {allExistingIdeas.length > 0 && (
+                  <optgroup label="📝 Alle eksisterende idéer">
+                    {allExistingIdeas
+                      .filter(idea => !matchedIdeas.some(match => match.id === idea.id)) // Exclude already matched ideas
+                      .map((idea) => (
+                        <option key={idea.id} value={idea.id}>
+                          {idea.ai_title || idea.title || 'Ingen titel'}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+              
+              {/* Show resume for selected idea */}
+              {selectedIdeaId && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-medium">Resumé:</span>{' '}
+                    {(() => {
+                      // First check in matched ideas, then in all ideas
+                      const matchedIdea = matchedIdeas.find(idea => idea.id === selectedIdeaId);
+                      const allIdea = allExistingIdeas.find(idea => idea.id === selectedIdeaId);
+                      return matchedIdea?.resume || allIdea?.resume || 'Intet resumé';
+                    })()}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={addToExistingIdea}
+                disabled={!selectedIdeaId || addingToExisting || creatingNew}
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center justify-center w-full">
+                  {addingToExisting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
+                      <span>Tilføjer...</span>
+                    </>
+                  ) : (
+                    <span>Tilføj til valgte idé</span>
+                  )}
+                </div>
+              </Button>
+              
+              <Button
+                onClick={() => createNewIdea(cleanedText)}
+                disabled={addingToExisting || creatingNew}
+                variant="outline"
+                className="flex-1 min-w-0"
+              >
+                <div className="flex items-center justify-center w-full">
+                  {creatingNew ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
+                      <span>Opretter...</span>
+                    </>
+                  ) : (
+                    <span>Opret som ny idé</span>
+                  )}
+                </div>
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

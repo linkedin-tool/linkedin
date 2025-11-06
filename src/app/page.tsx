@@ -749,6 +749,101 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Target Audience */}
+        <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                Er Nolia noget for dig?
+              </h2>
+              <p className="text-xl text-gray-600">
+                Nolia er skabt til professionelle, der vil styrke deres LinkedIn-tilstedeværelse uden at bruge timer hver uge
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              <Card className="p-8 bg-white border border-gray-100 rounded-2xl shadow-lg">
+                <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
+                  <Target className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Perfekt til dig, der er:
+                </h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Soloselvstændig, konsulent eller coach</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Specialist der vil styrke sin synlighed</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Iværksætter med personligt brand</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Leder der deler faglig viden</span>
+                  </li>
+                </ul>
+              </Card>
+
+              <Card className="p-8 bg-white border border-gray-100 rounded-2xl shadow-lg">
+                <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mb-6">
+                  <Users className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Hvis du genkender dig selv:
+                </h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Får ofte gode idéer, men mangler struktur</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Har svært ved at finde tid til at skrive</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Vil poste med din egen stemme – bare hurtigere</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                    <span className="text-gray-700">Ønsker konsistent LinkedIn-aktivitet</span>
+                  </li>
+                </ul>
+              </Card>
+            </div>
+
+            <div className="text-center mt-12">
+              <p className="text-lg text-gray-600 mb-6">
+                Nolia hjælper dig med at transformere dine tanker til professionelle LinkedIn-opslag på minutter, ikke timer.
+              </p>
+              <button
+                onClick={() => {
+                  const section = document.getElementById('pricing');
+                  if (section) {
+                    const headerHeight = 80;
+                    const elementPosition = section.offsetTop;
+                    const offsetPosition = elementPosition - headerHeight;
+
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: 'smooth'
+                    });
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-medium transition-colors inline-flex items-center gap-2"
+              >
+                Se priser og kom i gang
+                <TrendingUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section className="py-20" id="pricing">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

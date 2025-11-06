@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
         .eq('id', ideaId);
     }
 
-    // Generate suggestions (and title if initial generation)
+    // Generate suggestions (and title + resume if initial generation)
     const suggestions = await generateAISuggestions(content, type, existingSuggestions);
     const aiTitle = generateNew ? null : await generateAITitle(content, type);
+    const aiResume = generateNew ? null : await generateAIResume(content, type);
 
     // Update the idea with AI suggestions and status
     if (generateNew) {
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
         .update({ 
           ai_suggestions: suggestions,
           ai_title: aiTitle,
+          resume: aiResume,
           ai_suggestions_status: 'completed'
         })
         .eq('id', ideaId);
@@ -85,7 +87,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       suggestions,
-      aiTitle
+      aiTitle,
+      aiResume
     });
 
   } catch (error) {
@@ -352,6 +355,60 @@ function parseAISuggestions(aiResponse: string): Array<{title: string, descripti
   } catch (error) {
     console.error('Error parsing AI suggestions:', error);
     throw new Error(`Failed to parse AI suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+async function generateAIResume(content: string, type: string): Promise<string> {
+  const prompt = `Lav et ultrakorte resumé på maksimalt 2 linjer (ca. 20-30 ord),
+som beskriver idéens kernepunkter og hovedbudskab.
+Brug faktuel og præcis sprog - ikke kreative vinkler.
+
+Eksempler:
+Idétekst: "Jeg vil lave et opslag om dengang jeg tabte min pung og fik idéen til min første virksomhed."
+Resumé: "Personlig historie om hvordan et uheld førte til iværksætteri. Fokus på at finde muligheder i udfordringer."
+
+Idétekst: "Jeg vil skrive om at gå fra ansat til selvstændig."
+Resumé: "Karriereskifte fra fast ansættelse til selvstændighed. Erfaringer og overvejelser ved overgangen."
+
+Idétekst: "Jeg vil lave et opslag om hvorfor jeg begyndte at løbe maraton."
+Resumé: "Motivation og rejse mod maraton-løb. Personlige grunde og træningsproces."
+
+Lav et kort, præcist resumé der fanger essensen af idéen.`;
+
+  try {
+    console.log('📝 Generating AI resume for type:', type);
+    console.log('📝 Content preview:', content.substring(0, 100) + '...');
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', // Use faster model for resume
+      messages: [
+        {
+          role: 'system',
+          content: prompt
+        },
+        {
+          role: 'user',
+          content: `Lav et kort resumé til denne idé:\n\n"${content}"`
+        }
+      ],
+      temperature: 0.5,
+      max_tokens: 100
+    });
+
+    const aiResume = response.choices[0]?.message?.content?.trim() || '';
+    console.log('✅ AI Resume generated:', aiResume);
+    
+    // Clean the resume - remove quotes and ensure it's not too long
+    const cleanResume = aiResume.replace(/^["']|["']$/g, '').substring(0, 200);
+    
+    if (!cleanResume) {
+      throw new Error('AI returned empty resume');
+    }
+    
+    return cleanResume;
+  } catch (error) {
+    console.error('❌ Error generating AI resume:', error);
+    throw new Error(`AI resume generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

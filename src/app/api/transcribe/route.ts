@@ -28,12 +28,7 @@ VIGTIGE REGLER:
 - Returner kun ren, korrekt dansk tekst
 
 AFSNITSFORMATERING:
-- Opdel tekster i naturlige afsnit for bedre læsbarhed
-- Lav nyt afsnit når der skiftes emne eller fokus
-- Lav nyt afsnit ved naturlige pauser eller tankeskift
-- Lav nyt afsnit når der introduceres nye informationer eller aspekter
-- Brug dobbelt linjeskift (\n\n) mellem afsnit
-- Selv kortere tekster kan have afsnit hvis der er naturlige opdeling
+- Altid korte afsnit på maksimalt 1 sætning.
 
 STAVEKORREKTION:
 - Ret alle fejlstavede ord til korrekt dansk

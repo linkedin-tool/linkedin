@@ -19,6 +19,7 @@ interface Idea {
   id: string;
   title: string | null;
   ai_title: string | null;
+  resume: string | null;
   content: string;
   type: 'voice' | 'text' | 'image';
   image_url: string | null;
@@ -198,7 +199,7 @@ export default function IdebankPage() {
         .from("ideas" as any)
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
 
       if (ideasError) {
         throw ideasError;
@@ -1053,6 +1054,7 @@ export default function IdebankPage() {
       [activePostTab]: newIndex
     }));
   };
+
 
   // Håndter valg af version
   const handleSelectVersion = () => {

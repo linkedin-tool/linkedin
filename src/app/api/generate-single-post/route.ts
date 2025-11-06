@@ -67,13 +67,14 @@ JORDNÆR VINKEL:
 VIGTIGE REGLER:
 - Skriv præcis ét komplet LinkedIn opslag
 - 150 ord
-- Altid korte afsnit på maksimalt 1-2 sætninger
+- Altid korte afsnit på maksimalt 1 sætning.
+- Dobbelt linjeskift (\n\n) mellem afsnit.
 - Brug dansk sprog
 - Gør opslaget engagerende og værdifuldt
 - Tilføj relevante emojis hvor det passer naturligt
 - Slut med et spørgsmål der inviterer til diskussion
 - Brug ikke hashtags - kun tekst og emojis
-- Du må ALDRIG bruge lang tankestreg (—). Brug bindestreg i stedet (-)
+- Du må ALDRIG bruge lang tankestreg (—). Brug én almindelig bindestreg i stedet (-). Du må ALDRIG bruge bindestreger til at skabe en lang tankestreg.
 
 Analyser idéen grundigt og skriv ét jordnært LinkedIn opslag.`;
       break;
@@ -91,13 +92,14 @@ PROFESSIONEL VINKEL:
 VIGTIGE REGLER:
 - Skriv præcis ét komplet LinkedIn opslag
 - 150 ord
-- Altid korte afsnit på maksimalt 1-2 sætninger
+- Altid korte afsnit på maksimalt 1 sætning.
+- Dobbelt linjeskift (\n\n) mellem afsnit.
 - Brug dansk sprog
 - Gør opslaget engagerende og værdifuldt
 - Tilføj relevante emojis hvor det passer naturligt
 - Slut med et spørgsmål der inviterer til diskussion
 - Brug ikke hashtags - kun tekst og emojis
-- Du må ALDRIG bruge lang tankestreg (—). Brug bindestreg i stedet (-)
+- Du må ALDRIG bruge lang tankestreg (—). Brug én almindelig bindestreg i stedet (-). Du må ALDRIG bruge bindestreger til at skabe en lang tankestreg.
 
 Analyser idéen grundigt og skriv ét professionelt LinkedIn opslag.`;
       break;
@@ -115,13 +117,14 @@ STORYTELLING VINKEL:
 VIGTIGE REGLER:
 - Skriv præcis ét komplet LinkedIn opslag
 - 150 ord
-- Altid korte afsnit på maksimalt 1-2 sætninger
+- Altid korte afsnit på maksimalt 1 sætning.
+- Dobbelt linjeskift (\n\n) mellem afsnit.
 - Brug dansk sprog
 - Gør opslaget engagerende og værdifuldt
 - Tilføj relevante emojis hvor det passer naturligt
 - Slut med et spørgsmål der inviterer til diskussion
 - Brug ikke hashtags - kun tekst og emojis
-- Du må ALDRIG bruge lang tankestreg (—). Brug bindestreg i stedet (-)
+- Du må ALDRIG bruge lang tankestreg (—). Brug én almindelig bindestreg i stedet (-). Du må ALDRIG bruge bindestreger til at skabe en lang tankestreg.
 
 Analyser idéen grundigt og skriv ét storytelling LinkedIn opslag.`;
       break;

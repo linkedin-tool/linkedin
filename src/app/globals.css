@@ -191,3 +191,39 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+
+/* Remove blue outlines/borders from all input and textarea elements */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+/* Specifically target textarea to ensure no outline */
+textarea {
+  outline: none !important;
+}
+
+textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically target Tailwind's focus styles */
+.focus\:outline-none:focus {
+  outline: none !important;
+}
+
+.focus\:ring-0:focus {
+  box-shadow: none !important;
+}
+
+.focus\:border-0:focus {
+  border-color: transparent !important;
+}
+
+.focus\:shadow-none:focus {
+  box-shadow: none !important;
+}

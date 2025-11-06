@@ -162,8 +162,9 @@ OPGAVE: Analyser det følgende LinkedIn opslag og lav 3 forskellige scroll-stopp
 5. Skaber maksimal nysgerrighed uden at afsløre konklusionen.
 6. Du må ALDRIG bruge lang tankestreg (—). Brug bindestreg i stedet (-), hvis det er nødvendigt.
 7. Hver hook skal maksimalt være på 1-2 sætninger.
-8. Hver hook skal have en forskellig tilgang/vinkel på samme indhold.
-9. Du må ALDRIG formode eller antage noget. Eks nævne specifikke tal, mængder, perioder mv., som fx '300 km', '10 dage', '5 kg' osv, hvis ikke det står nævnt idéen.
+8. VIGTIGT FORMATERING: Hvis en hook har mere end én sætning, skal den anden sætning starte på en ny linje (ikke dobbelt linjeskift, bare enkelt linjeskift for bedre læsbarhed).
+9. Hver hook skal have en forskellig tilgang/vinkel på samme indhold.
+10. Du må ALDRIG formode eller antage noget. Eks nævne specifikke tal, mængder, perioder mv., som fx '300 km', '10 dage', '5 kg' osv, hvis ikke det står nævnt idéen.
 
 Returner de 3 hooks adskilt af "|||" - intet andet.
 Format: Hook1|||Hook2|||Hook3`;
