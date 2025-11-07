@@ -97,13 +97,13 @@ export async function POST(request: NextRequest) {
         // Update the existing schedule by modifying current phase and adding new phase
         const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
           phases: [
-            // Keep the current phase with essential attributes but set end_date
-            // DON'T set start_date as it cannot be modified for active phase
+            // Keep the current phase with all its attributes, only modify end_date
             {
               items: currentPhase.items.map((item: any) => ({
                 price: item.price,
                 quantity: item.quantity || 1,
               })),
+              start_date: currentPhase.start_date, // Keep original start_date
               end_date: endDate,
               proration_behavior: 'none',
             },
@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
         phases: [
           {
             items: currentItems,
+            start_date: 'now',
             end_date: endDate,
             proration_behavior: 'none',
           },
