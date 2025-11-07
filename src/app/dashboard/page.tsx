@@ -30,6 +30,8 @@ interface UserProfile {
   created_at: string | null
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
+  scheduled_downgrade_to?: string | null
+  scheduled_downgrade_date?: string | null
 }
 
 interface LinkedInPost {
@@ -266,19 +268,36 @@ function DashboardContent() {
               </div>
               <div>
                 {(() => {
-                  const downgraded = searchParams.get('downgraded')
-                  const effectiveDate = searchParams.get('effective_date')
+                  // First check database for persistent scheduled downgrade
+                  let targetPlan = userProfile?.scheduled_downgrade_to
+                  let effectiveDate = userProfile?.scheduled_downgrade_date
+                  
+                  // Fallback to URL params for immediate feedback after scheduling
+                  if (!targetPlan || !effectiveDate) {
+                    const downgraded = searchParams.get('downgraded')
+                    const urlEffectiveDate = searchParams.get('effective_date')
+                    if (downgraded && urlEffectiveDate) {
+                      targetPlan = downgraded
+                      effectiveDate = urlEffectiveDate
+                    }
+                  }
+                  
                   const upgraded = searchParams.get('upgraded')
                   
-                  if (downgraded) {
-                    const date = effectiveDate ? new Date(effectiveDate).toLocaleDateString('da-DK') : 'næste faktureringsperiode'
+                  if (targetPlan && effectiveDate) {
+                    const targetPlanText = targetPlan === 'pro' ? 'Pro' : 'Team'
+                    const date = new Date(effectiveDate).toLocaleDateString('da-DK', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
                     return (
                       <>
                         <h3 className="text-xl font-bold text-gray-900">
-                          Nedgradering planlagt til {downgraded === 'pro' ? 'Pro' : 'Team'} 📅
+                          Nedgradering planlagt til {targetPlanText} 📅
                         </h3>
                         <p className="text-gray-700 mt-1">
-                          Du beholder dine {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} rettigheder til {date}. Derefter skifter du til {downgraded === 'pro' ? 'Pro' : 'Team'} plan.
+                          Du beholder dine {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} rettigheder til {date}. Derefter skifter du til {targetPlanText} plan.
                         </p>
                       </>
                     )

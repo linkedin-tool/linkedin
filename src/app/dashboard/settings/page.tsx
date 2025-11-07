@@ -25,6 +25,8 @@ interface UserProfile {
   trial_end?: string | null
   subscription_created_at?: string | null
   subscription_canceled_at?: string | null
+  scheduled_downgrade_to?: string | null
+  scheduled_downgrade_date?: string | null
 }
 
 export default function SettingsPage() {
@@ -483,6 +485,49 @@ export default function SettingsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Check for scheduled downgrade from database or URL params */}
+                {(() => {
+                  // First check database for persistent scheduled downgrade
+                  let targetPlan = userProfile?.scheduled_downgrade_to
+                  let effectiveDate = userProfile?.scheduled_downgrade_date
+                  
+                  // Fallback to URL params for immediate feedback after scheduling
+                  if (!targetPlan || !effectiveDate) {
+                    const downgraded = searchParams.get('downgraded')
+                    const urlEffectiveDate = searchParams.get('effective_date')
+                    if (downgraded && urlEffectiveDate) {
+                      targetPlan = downgraded
+                      effectiveDate = urlEffectiveDate
+                    }
+                  }
+                  
+                  if (targetPlan && effectiveDate) {
+                    const targetPlanText = targetPlan === 'pro' ? 'Pro' : 'Team'
+                    const currentPlan = userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'
+                    const date = new Date(effectiveDate).toLocaleDateString('da-DK', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                    
+                    return (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-base font-medium text-blue-800 mb-2">
+                          <Calendar className="h-4 w-4" />
+                          Nedgradering planlagt 📅
+                        </div>
+                        <p className="text-base text-blue-700">
+                          Dit abonnement skifter fra <strong>{currentPlan}</strong> til <strong>{targetPlanText}</strong> den {date}
+                        </p>
+                        <p className="text-sm text-blue-600 mt-2">
+                          Du beholder alle {currentPlan} funktioner indtil nedgraderingen træder i kraft.
+                        </p>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
 
                 {userProfile?.subscription_status === 'canceled' && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">

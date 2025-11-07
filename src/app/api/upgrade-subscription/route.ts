@@ -115,6 +115,15 @@ export async function POST(request: NextRequest) {
           ],
         })
 
+        // Save scheduled downgrade info to Supabase
+        await supabase
+          .from('users')
+          .update({
+            scheduled_downgrade_to: targetPlan,
+            scheduled_downgrade_date: userData.current_period_end
+          })
+          .eq('stripe_customer_id', customerId)
+
         return NextResponse.json({
           success: true,
           schedule: updatedSchedule,
@@ -184,6 +193,15 @@ export async function POST(request: NextRequest) {
           },
         ],
       })
+
+      // Save scheduled downgrade info to Supabase
+      await supabase
+        .from('users')
+        .update({
+          scheduled_downgrade_to: targetPlan,
+          scheduled_downgrade_date: userData.current_period_end
+        })
+        .eq('stripe_customer_id', customerId)
 
       return NextResponse.json({
         success: true,
