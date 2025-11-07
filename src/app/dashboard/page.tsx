@@ -15,7 +15,8 @@ import {
   PlusCircle,
   Clock,
   Link as LinkIcon,
-  BarChart3
+  BarChart3,
+  Building2
 } from 'lucide-react'
 
 interface UserProfile {
@@ -247,18 +248,22 @@ function DashboardContent() {
     <div className="space-y-8">
       {/* Welcome message for Pro users */}
       {showWelcome && (
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className={`p-6 bg-gradient-to-r ${userProfile?.subscription_plan === 'team' ? 'from-purple-50 to-purple-100 border-purple-200' : 'from-blue-50 to-indigo-50 border-blue-200'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <Crown className="w-6 h-6 text-white" />
+              <div className={`w-12 h-12 ${userProfile?.subscription_plan === 'team' ? 'bg-purple-600' : 'bg-blue-600'} rounded-full flex items-center justify-center`}>
+                {userProfile?.subscription_plan === 'team' ? (
+                  <Building2 className="w-6 h-6 text-white" />
+                ) : (
+                  <Crown className="w-6 h-6 text-white" />
+                )}
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
-                  Velkommen til Basic Platform Pro! 🎉
+                  Velkommen til Nolia {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'}! 🎉
                 </h3>
                 <p className="text-gray-700 mt-1">
-                  Dit Pro abonnement er nu aktivt. Du har adgang til alle premium funktioner.
+                  Dit {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} abonnement er nu aktivt. Du har adgang til alle {userProfile?.subscription_plan === 'team' ? 'Team funktioner og kan nu oprette team medlemmer' : 'premium funktioner'}.
                 </p>
               </div>
             </div>

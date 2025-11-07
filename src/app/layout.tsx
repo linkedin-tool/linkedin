@@ -11,8 +11,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "Basic Platform - Administrer dine abonnementer",
-  description: "En simpel og kraftfuld platform til at håndtere brugerregistrering, betalinger og abonnementer.",
+  title: "Nolia - AI-drevet LinkedIn værktøj",
+  description: "Skab stærke LinkedIn-opslag på få minutter med din egen AI-assistent. Nolia lærer din stemme og dit publikum.",
 };
 
 export default function RootLayout({
