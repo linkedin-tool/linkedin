@@ -427,6 +427,8 @@ export type Database = {
           name: string
           next_billing_date: string | null
           phone: string | null
+          scheduled_downgrade_date: string | null
+          scheduled_downgrade_to: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_canceled_at: string | null
@@ -445,6 +447,8 @@ export type Database = {
           name: string
           next_billing_date?: string | null
           phone?: string | null
+          scheduled_downgrade_date?: string | null
+          scheduled_downgrade_to?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_canceled_at?: string | null
@@ -463,6 +467,8 @@ export type Database = {
           name?: string
           next_billing_date?: string | null
           phone?: string | null
+          scheduled_downgrade_date?: string | null
+          scheduled_downgrade_to?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_canceled_at?: string | null
@@ -629,25 +635,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// Custom types for the application
-export interface AISuggestion {
-  title: string;
-  description: string;
-}
-
-export interface Idea {
-  id: string;
-  user_id: string;
-  content: string;
-  type: 'voice' | 'text' | 'image';
-  title?: string | null;
-  ai_title?: string | null;
-  transcribed_text?: string | null;
-  image_url?: string | null;
-  original_audio_url?: string | null;
-  ai_suggestions?: AISuggestion[] | null;
-  ai_suggestions_status?: 'pending' | 'generating' | 'completed' | 'failed' | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
