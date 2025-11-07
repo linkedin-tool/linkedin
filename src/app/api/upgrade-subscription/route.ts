@@ -85,11 +85,13 @@ export async function POST(request: NextRequest) {
           phases: [
             {
               items: currentItems,
+              start_date: 'now',
               end_date: endDate,
               proration_behavior: 'none',
             },
             {
               items: [{ price: newPriceId, quantity: 1 }],
+              start_date: endDate,
               proration_behavior: 'none',
             },
           ],
@@ -153,11 +155,13 @@ export async function POST(request: NextRequest) {
         phases: [
           {
             items: currentItems,
+            start_date: 'now',
             end_date: endDate,
             proration_behavior: 'none',
           },
           {
             items: [{ price: newPriceId, quantity: 1 }],
+            start_date: endDate,
             proration_behavior: 'none',
           },
         ],
@@ -170,7 +174,7 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error: any) {
-    console.error('Error upgrading subscription:', error)
+    console.error('Error updating subscription:', error)
 
     return NextResponse.json(
       {
