@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    console.log('📁 Creating PDF storage entry for user:', user.id)
+    console.log('📁 Creating PDF storage entry for authenticated user')
     console.log('📄 PDF details:', { filename, title, slideCount })
 
     // Create a unique filename with timestamp

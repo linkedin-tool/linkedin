@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    console.log(`🎨 Generating ${slideCount} PDF slides for user:`, user.id)
+    console.log(`🎨 Generating ${slideCount} PDF slides for authenticated user`)
     console.log('📝 Idea preview:', idea.substring(0, 100) + '...')
 
     // Generate slides with OpenAI

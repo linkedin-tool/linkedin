@@ -286,6 +286,22 @@ export default function HomePage() {
       
       if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team') {
         // Downgrade from Team to Pro
+        console.log('🔄 Sending downgrade request:', {
+          customerId: userProfile.stripe_customer_id ? 'EXISTS' : 'MISSING',
+          targetPlan: 'pro',
+          upgradeType: 'downgrade',
+          userProfile: {
+            subscription_status: userProfile.subscription_status,
+            subscription_plan: userProfile.subscription_plan,
+            stripe_customer_id: userProfile.stripe_customer_id ? 'EXISTS' : 'MISSING'
+          }
+        })
+        
+        if (!userProfile.stripe_customer_id) {
+          alert('Fejl: Ingen Stripe customer ID fundet. Prøv at logge ud og ind igen.')
+          return
+        }
+        
         response = await fetch('/api/upgrade-subscription', {
           method: 'POST',
           headers: {
