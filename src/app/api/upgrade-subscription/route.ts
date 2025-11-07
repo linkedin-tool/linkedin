@@ -82,13 +82,24 @@ export async function POST(request: NextRequest) {
 
         // Get the existing schedule to see its current phases
         const existingSchedule = await stripe.subscriptionSchedules.retrieve(subscription.schedule)
+        const currentPhase = existingSchedule.phases.find((phase: any) => 
+          phase.start_date <= Math.floor(Date.now() / 1000) && 
+          (!phase.end_date || phase.end_date > Math.floor(Date.now() / 1000))
+        )
         
-        // Update the existing schedule by adding a new phase after the current one
+        if (!currentPhase) {
+          return NextResponse.json(
+            { error: 'Kunne ikke finde nuværende fase i schedule' },
+            { status: 400 }
+          )
+        }
+        
+        // Update the existing schedule by modifying current phase and adding new phase
         const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
           phases: [
-            // Keep the current phase but set its end_date
+            // Keep the current phase with all its attributes but set end_date
             {
-              items: currentItems,
+              ...currentPhase,
               end_date: endDate,
               proration_behavior: 'none',
             },
