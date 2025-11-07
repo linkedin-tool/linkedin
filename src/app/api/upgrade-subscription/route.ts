@@ -39,28 +39,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const subscription = subscriptions.data[0]
+    const subscription = subscriptions.data[0] as any // Stripe subscription with all properties
     const subscriptionItem = subscription.items.data[0]
 
-    // Update subscription with new price
-    const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-      items: [{
-        id: subscriptionItem.id,
-        price: newPriceId,
-      }],
-      // Proration behavior based on upgrade/downgrade
-      proration_behavior: upgradeType === 'upgrade' ? 'create_prorations' : 'none',
-      // Keep billing cycle unchanged for upgrades
-      ...(upgradeType === 'upgrade' && {
+    if (upgradeType === 'upgrade') {
+      // For upgrades, update subscription immediately with proration
+      const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+        items: [{
+          id: subscriptionItem.id,
+          price: newPriceId,
+        }],
+        proration_behavior: 'create_prorations',
         billing_cycle_anchor: 'unchanged'
       })
-    })
 
-    return NextResponse.json({ 
-      success: true, 
-      subscription: updatedSubscription,
-      url: `/dashboard?upgraded=${upgradeType}`
-    })
+      return NextResponse.json({ 
+        success: true, 
+        subscription: updatedSubscription,
+        url: `/dashboard?upgraded=upgrade`
+      })
+    } else {
+      // For downgrades, schedule the change for end of current period
+      const currentItems = subscription.items.data.map((item: any) => ({
+        price: item.price.id,
+        quantity: item.quantity ?? 1,
+      }))
+
+      // Create a subscription schedule that maintains current plan until period end
+      const schedule = await stripe.subscriptionSchedules.create({
+        from_subscription: subscription.id,
+        phases: [
+          {
+            items: currentItems,
+            end_date: subscription.current_period_end, // Run current period to completion
+            proration_behavior: 'none',
+          },
+          {
+            items: [{ price: newPriceId, quantity: 1 }],
+            // Next phase starts at period end with new price
+          },
+        ],
+      })
+
+      return NextResponse.json({ 
+        success: true, 
+        schedule: schedule,
+        url: `/dashboard?downgraded=${targetPlan}&effective_date=${new Date(subscription.current_period_end * 1000).toISOString()}`
+      })
+    }
   } catch (error) {
     console.error('Error upgrading subscription:', error)
     return NextResponse.json(

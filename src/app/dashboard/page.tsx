@@ -93,7 +93,13 @@ function DashboardContent() {
   useEffect(() => {
     const welcome = searchParams.get('welcome')
     const plan = searchParams.get('plan')
-    if (welcome && plan === 'pro') {
+    const upgraded = searchParams.get('upgraded')
+    const downgraded = searchParams.get('downgraded')
+    
+    // Show welcome for new subscriptions, upgrades, or downgrades
+    if ((welcome && (plan === 'pro' || plan === 'team')) || 
+        (upgraded === 'team' || upgraded === 'pro') ||
+        (downgraded === 'pro' || downgraded === 'team')) {
       setShowWelcome(true)
     }
   }, [searchParams])
@@ -259,12 +265,36 @@ function DashboardContent() {
                 )}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
-                  Velkommen til Nolia {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'}! 🎉
-                </h3>
-                <p className="text-gray-700 mt-1">
-                  Dit {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} abonnement er nu aktivt. Du har adgang til alle {userProfile?.subscription_plan === 'team' ? 'Team funktioner og kan nu oprette team medlemmer' : 'Pro funktioner'}.
-                </p>
+                {(() => {
+                  const downgraded = searchParams.get('downgraded')
+                  const effectiveDate = searchParams.get('effective_date')
+                  const upgraded = searchParams.get('upgraded')
+                  
+                  if (downgraded) {
+                    const date = effectiveDate ? new Date(effectiveDate).toLocaleDateString('da-DK') : 'næste faktureringsperiode'
+                    return (
+                      <>
+                        <h3 className="text-xl font-bold text-gray-900">
+                          Nedgradering planlagt til {downgraded === 'pro' ? 'Pro' : 'Team'} 📅
+                        </h3>
+                        <p className="text-gray-700 mt-1">
+                          Du beholder dine {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} rettigheder til {date}. Derefter skifter du til {downgraded === 'pro' ? 'Pro' : 'Team'} plan.
+                        </p>
+                      </>
+                    )
+                  } else {
+                    return (
+                      <>
+                        <h3 className="text-xl font-bold text-gray-900">
+                          Velkommen til Nolia {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'}! 🎉
+                        </h3>
+                        <p className="text-gray-700 mt-1">
+                          Dit {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} abonnement er nu aktivt. Du har adgang til alle {userProfile?.subscription_plan === 'team' ? 'Team funktioner og kan nu oprette team medlemmer' : 'premium funktioner'}.
+                        </p>
+                      </>
+                    )
+                  }
+                })()}
               </div>
             </div>
             <Button 
