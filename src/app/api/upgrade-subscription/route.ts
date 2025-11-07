@@ -62,10 +62,49 @@ export async function POST(request: NextRequest) {
 
     // Check if subscription already has a schedule
     if (subscription.schedule) {
-      // Cancel the existing schedule and create a new one
-      await stripe.subscriptionSchedules.cancel(subscription.schedule)
+      // If there's already a schedule, update it instead of creating a new one
+      if (upgradeType === 'downgrade') {
+        // Get current items from subscription
+        const currentItems = subscription.items.data.map((item: any) => ({
+          price: item.price.id,
+          quantity: item.quantity ?? 1,
+        }))
+
+        // Use current_period_end from Supabase (convert to Unix timestamp)
+        if (!userData.current_period_end) {
+          return NextResponse.json(
+            { error: 'Mangler periode information for abonnement' },
+            { status: 400 }
+          )
+        }
+        
+        const endDate = Math.floor(new Date(userData.current_period_end).getTime() / 1000)
+
+        // Update the existing schedule with new phases
+        const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
+          phases: [
+            {
+              items: currentItems,
+              end_date: endDate,
+              proration_behavior: 'none',
+            },
+            {
+              items: [{ price: newPriceId, quantity: 1 }],
+              proration_behavior: 'none',
+            },
+          ],
+        })
+
+        return NextResponse.json({
+          success: true,
+          schedule: updatedSchedule,
+          url: `/dashboard?downgraded=${targetPlan}&effective_date=${userData.current_period_end}`
+        })
+      }
       
-      // Re-fetch subscription after canceling schedule
+      // For upgrades, cancel existing schedule and continue with normal flow
+      await stripe.subscriptionSchedules.cancel(subscription.schedule)
+      await new Promise(resolve => setTimeout(resolve, 1000))
       const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
       Object.assign(subscription, refreshedSubscription)
     }
