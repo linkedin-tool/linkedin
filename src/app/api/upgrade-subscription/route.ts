@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
-  console.log('🚀 API upgrade-subscription called')
-
   try {
     const { customerId, targetPlan, upgradeType } = await request.json()
-
-    console.log('🔄 Upgrade subscription request:', {
-      customerId: customerId ? `${customerId.substring(0, 8)}...` : 'MISSING',
-      targetPlan,
-      upgradeType
-    })
 
     if (!customerId || !targetPlan || !upgradeType) {
       return NextResponse.json(
@@ -47,36 +40,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get full subscription details to ensure we have current_period_end
+    // Get full subscription details
     const fullSubscription = await stripe.subscriptions.retrieve(subscriptions.data[0].id)
     const subscription = fullSubscription as any
     const subscriptionItem = subscription.items.data[0]
 
-    console.log('📊 Full subscription details:', {
-      id: subscription.id,
-      current_period_end: subscription.current_period_end,
-      current_period_start: subscription.current_period_start,
-      status: subscription.status,
-      schedule: subscription.schedule
-    })
+    // Get user's current_period_end from Supabase
+    const supabase = createAdminClient()
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('current_period_end')
+      .eq('stripe_customer_id', customerId)
+      .single()
+
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: 'Bruger ikke fundet' },
+        { status: 404 }
+      )
+    }
 
     // Check if subscription already has a schedule
     if (subscription.schedule) {
-      console.log('⚠️ Subscription already has schedule:', subscription.schedule)
-      
-      // Cancel the existing schedule and use direct subscription update instead
-      console.log('🗑️ Canceling existing schedule to allow new downgrade')
+      // Cancel the existing schedule and create a new one
       await stripe.subscriptionSchedules.cancel(subscription.schedule)
       
       // Re-fetch subscription after canceling schedule
       const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
-      console.log('🔄 Refreshed subscription after schedule cancel:', {
-        id: refreshedSubscription.id,
-        current_period_end: refreshedSubscription.current_period_end,
-        schedule: refreshedSubscription.schedule
-      })
-      
-      // Update the subscription variable to use refreshed data
       Object.assign(subscription, refreshedSubscription)
     }
 
@@ -98,46 +88,25 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // For downgrades, use subscription schedules to delay the change
-      console.log('🗓️ Creating subscription schedule for downgrade')
-      
-      // Get current items from subscription
       const currentItems = subscription.items.data.map((item: any) => ({
         price: item.price.id,
         quantity: item.quantity ?? 1,
       }))
 
-      console.log('Current items:', currentItems)
-      console.log('New price ID:', newPriceId)
-      console.log('Period end:', subscription.current_period_end)
-
-      // Validate that we have current_period_end
-      if (!subscription.current_period_end) {
-        console.log('❌ Missing current_period_end - using direct subscription update instead of schedule')
-        
-        // Fallback: Use direct subscription update with immediate effect
-        const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-          items: [{
-            id: subscriptionItem.id,
-            price: newPriceId,
-          }],
-          proration_behavior: 'none', // No proration for downgrades
-        })
-
-        console.log('✅ Direct subscription update completed (fallback)')
-
-        return NextResponse.json({
-          success: true,
-          subscription: updatedSubscription,
-          url: `/dashboard?downgraded=${targetPlan}&immediate=true`
-        })
+      // Use current_period_end from Supabase (convert to Unix timestamp)
+      if (!userData.current_period_end) {
+        return NextResponse.json(
+          { error: 'Mangler periode information for abonnement' },
+          { status: 400 }
+        )
       }
+      
+      const endDate = Math.floor(new Date(userData.current_period_end).getTime() / 1000)
 
       // Create subscription schedule from existing subscription
       const schedule = await stripe.subscriptionSchedules.create({
         from_subscription: subscription.id,
       })
-
-      console.log('✅ Created schedule:', schedule.id)
 
       // Update the schedule with phases
       const updatedSchedule = await stripe.subscriptionSchedules.update(schedule.id, {
@@ -145,7 +114,7 @@ export async function POST(request: NextRequest) {
         phases: [
           {
             items: currentItems,
-            end_date: subscription.current_period_end,
+            end_date: endDate,
             proration_behavior: 'none',
           },
           {
@@ -155,21 +124,14 @@ export async function POST(request: NextRequest) {
         ],
       })
 
-      console.log('✅ Updated schedule with phases')
-
       return NextResponse.json({
         success: true,
         schedule: updatedSchedule,
-        url: `/dashboard?downgraded=${targetPlan}&effective_date=${new Date(subscription.current_period_end * 1000).toISOString()}`
+        url: `/dashboard?downgraded=${targetPlan}&effective_date=${userData.current_period_end}`
       })
     }
   } catch (error: any) {
-    console.error('❌ Error upgrading subscription:', error)
-    console.error('Error details:', {
-      message: error.message,
-      type: error.type,
-      code: error.code
-    })
+    console.error('Error upgrading subscription:', error)
 
     return NextResponse.json(
       {
