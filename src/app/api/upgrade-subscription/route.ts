@@ -80,8 +80,20 @@ export async function POST(request: NextRequest) {
         
         const endDate = Math.floor(new Date(userData.current_period_end).getTime() / 1000)
 
-        // Update the existing schedule with new phases
-        const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
+        // Cancel the existing schedule and create a new one
+        await stripe.subscriptionSchedules.cancel(subscription.schedule)
+        
+        // Wait a moment for the cancellation to process
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Create a new schedule from the subscription
+        const schedule = await stripe.subscriptionSchedules.create({
+          from_subscription: subscription.id,
+        })
+
+        // Update the new schedule with phases
+        const updatedSchedule = await stripe.subscriptionSchedules.update(schedule.id, {
+          end_behavior: 'release',
           phases: [
             {
               items: currentItems,
