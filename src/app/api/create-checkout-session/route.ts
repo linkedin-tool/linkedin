@@ -3,7 +3,7 @@ import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, plan, isUpgrade } = await request.json()
+    const { email, name, plan } = await request.json()
 
     if (!email || !name) {
       return NextResponse.json(
@@ -31,34 +31,52 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // If this is an upgrade, update existing subscription instead of creating new checkout
-    if (isUpgrade && customer) {
-      // Get customer's current subscription
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.id,
-        status: 'active',
-        limit: 1
-      })
+    // Check if customer has existing subscription for upgrades
+    const existingSubscriptions = await stripe.subscriptions.list({
+      customer: customer.id,
+      status: 'active',
+      limit: 1
+    })
 
-      if (subscriptions.data.length > 0) {
-        const subscription = subscriptions.data[0]
-        const subscriptionItem = subscription.items.data[0]
-
-        // Update subscription with new price
-        const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-          items: [{
-            id: subscriptionItem.id,
-            price: priceId,
-          }],
-          proration_behavior: 'create_prorations',
-          billing_cycle_anchor: 'unchanged'
+    // If customer has existing subscription, we need to handle upgrade differently
+    if (existingSubscriptions.data.length > 0) {
+      const currentSubscription = existingSubscriptions.data[0]
+      const currentPriceId = currentSubscription.items.data[0].price.id
+      
+      // Only allow upgrade from Pro to Team
+      if (currentPriceId === STRIPE_PRICE_ID && priceId === STRIPE_PRICE_ID_TEAM) {
+        // For Pro to Team upgrade, create a one-time payment for the difference
+        // and then update the subscription
+        const session = await stripe.checkout.sessions.create({
+          customer: customer.id,
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'dkk',
+                product_data: {
+                  name: 'Upgrade til Team Plan',
+                  description: 'Opgradering fra Pro til Team - betaling af difference'
+                },
+                unit_amount: 80400, // 804 kr difference (999 - 195)
+              },
+              quantity: 1,
+            },
+          ],
+          mode: 'payment', // One-time payment instead of subscription
+          success_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/checkout-success?session_id={CHECKOUT_SESSION_ID}&upgrade=true`,
+          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/?canceled=true`,
+          metadata: {
+            customer_email: email,
+            customer_name: name,
+            subscription_id: currentSubscription.id,
+            upgrade_to: 'team'
+          },
+          allow_promotion_codes: true,
+          billing_address_collection: 'required',
         })
 
-        return NextResponse.json({ 
-          success: true, 
-          subscription: updatedSubscription,
-          url: `/dashboard?upgraded=upgrade`
-        })
+        return NextResponse.json({ sessionId: session.id, url: session.url })
       }
     }
 

@@ -263,7 +263,7 @@ function DashboardContent() {
                   Velkommen til Nolia {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'}! 🎉
                 </h3>
                 <p className="text-gray-700 mt-1">
-                  Dit {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} abonnement er nu aktivt. Du har adgang til alle {userProfile?.subscription_plan === 'team' ? 'Team funktioner og kan nu oprette team medlemmer' : 'premium funktioner'}.
+                  Dit {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} abonnement er nu aktivt. Du har adgang til alle {userProfile?.subscription_plan === 'team' ? 'Team funktioner og kan nu oprette team medlemmer' : 'Pro funktioner'}.
                 </p>
               </div>
             </div>

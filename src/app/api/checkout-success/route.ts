@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const sessionId = searchParams.get('session_id')
+  const isUpgrade = searchParams.get('upgrade') === 'true'
 
   if (!sessionId) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=missing_session`)
@@ -16,7 +17,38 @@ export async function GET(request: NextRequest) {
       expand: ['customer', 'subscription']
     })
 
-    if (!session.customer || !session.subscription) {
+    if (!session.customer) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=invalid_session`)
+    }
+
+    // For upgrades, we don't have a subscription in the session (it's a one-time payment)
+    if (isUpgrade) {
+      if (session.payment_status === 'paid' && session.metadata?.subscription_id && session.metadata?.upgrade_to) {
+        // Update the existing subscription to Team plan
+        const subscriptionId = session.metadata.subscription_id
+        const upgradeTo = session.metadata.upgrade_to
+        
+        if (upgradeTo === 'team') {
+          const { STRIPE_PRICE_ID_TEAM } = await import('@/lib/stripe')
+          
+          // Update subscription to Team plan
+          await stripe.subscriptions.update(subscriptionId, {
+            items: [{
+              id: (await stripe.subscriptions.retrieve(subscriptionId)).items.data[0].id,
+              price: STRIPE_PRICE_ID_TEAM,
+            }],
+            proration_behavior: 'none', // No proration since we already paid the difference
+          })
+        }
+        
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?upgraded=team`)
+      } else {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=upgrade_failed`)
+      }
+    }
+
+    // For new subscriptions, we need a subscription
+    if (!session.subscription) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=invalid_session`)
     }
 

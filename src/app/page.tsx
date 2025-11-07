@@ -360,7 +360,7 @@ export default function HomePage() {
       let response
       
       if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'pro') {
-        // Upgrade from Pro to Team - should go to Stripe for payment
+        // Upgrade from Pro to Team - go to Stripe for payment
         response = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: {
@@ -369,8 +369,7 @@ export default function HomePage() {
           body: JSON.stringify({
             email: userProfile.email,
             name: userProfile.name,
-            plan: 'team',
-            isUpgrade: true
+            plan: 'team'
           }),
         })
       } else {
