@@ -80,30 +80,21 @@ export async function POST(request: NextRequest) {
         
         const endDate = Math.floor(new Date(userData.current_period_end).getTime() / 1000)
 
-        // Cancel the existing schedule and create a new one
-        await stripe.subscriptionSchedules.cancel(subscription.schedule)
+        // Get the existing schedule to see its current phases
+        const existingSchedule = await stripe.subscriptionSchedules.retrieve(subscription.schedule)
         
-        // Wait a moment for the cancellation to process
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Create a new schedule from the subscription
-        const schedule = await stripe.subscriptionSchedules.create({
-          from_subscription: subscription.id,
-        })
-
-        // Update the new schedule with phases
-        const updatedSchedule = await stripe.subscriptionSchedules.update(schedule.id, {
-          end_behavior: 'release',
+        // Update the existing schedule by adding a new phase after the current one
+        const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
           phases: [
+            // Keep the current phase but set its end_date
             {
               items: currentItems,
-              start_date: 'now',
               end_date: endDate,
               proration_behavior: 'none',
             },
+            // Add the new phase that starts when the current one ends
             {
               items: [{ price: newPriceId, quantity: 1 }],
-              start_date: endDate,
               proration_behavior: 'none',
             },
           ],
