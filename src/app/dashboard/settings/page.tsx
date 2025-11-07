@@ -200,6 +200,8 @@ export default function SettingsPage() {
     switch (plan) {
       case 'pro':
         return status === 'canceled' ? 'Pro Plan (Opsagt)' : 'Pro Plan'
+      case 'team':
+        return status === 'canceled' ? 'Team Plan (Opsagt)' : 'Team Plan'
       case 'free_trial':
         return 'Gratis Prøveperiode'
       default:
@@ -407,10 +409,12 @@ export default function SettingsPage() {
                     </label>
                     <div className="flex items-center gap-2">
                       <Badge 
-                        variant={userProfile?.subscription_plan === 'pro' && userProfile?.subscription_status !== 'canceled' ? 'default' : 'secondary'}
+                        variant={(userProfile?.subscription_plan === 'pro' || userProfile?.subscription_plan === 'team') && userProfile?.subscription_status !== 'canceled' ? 'default' : 'secondary'}
                         className={`${
                           userProfile?.subscription_plan === 'pro' 
                             ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : userProfile?.subscription_plan === 'team'
+                            ? 'bg-purple-100 text-purple-800 border-purple-200'
                             : userProfile?.subscription_plan === 'free_trial' 
                             ? 'bg-blue-100 text-blue-800 border-0' 
                             : ''
@@ -420,6 +424,9 @@ export default function SettingsPage() {
                       </Badge>
                       {userProfile?.subscription_plan === 'pro' && (
                         <Crown className="h-4 w-4 text-yellow-500" />
+                      )}
+                      {userProfile?.subscription_plan === 'team' && (
+                        <Building2 className="h-4 w-4 text-purple-500" />
                       )}
                     </div>
                   </div>

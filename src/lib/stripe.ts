@@ -10,3 +10,4 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 })
 
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1SCksuFZKXWbK8kLSpayi0jf'
+export const STRIPE_PRICE_ID_TEAM = process.env.STRIPE_PRICE_ID_PLAN || 'price_1SQuPgRd5moYgYRyBIABy81b'

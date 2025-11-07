@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
@@ -62,6 +62,17 @@ export async function POST(request: NextRequest) {
             console.error('Error converting dates:', dateError)
           }
 
+          // Determine subscription plan based on price ID
+          let subscriptionPlan = 'pro' // default
+          const subscriptionItem = subscription.items?.data?.[0]
+          if (subscriptionItem?.price?.id) {
+            if (subscriptionItem.price.id === STRIPE_PRICE_ID_TEAM) {
+              subscriptionPlan = 'team'
+            } else if (subscriptionItem.price.id === STRIPE_PRICE_ID) {
+              subscriptionPlan = 'pro'
+            }
+          }
+
           const updateData = {
             stripe_customer_id: subscription.customer,
             stripe_subscription_id: subscription.id,
@@ -69,7 +80,7 @@ export async function POST(request: NextRequest) {
             current_period_end: currentPeriodEnd,
             next_billing_date: nextBillingDate,
             cancel_at_period_end: subscription.cancel_at_period_end || subscription.cancel_at ? true : false,
-            subscription_plan: 'pro',
+            subscription_plan: subscriptionPlan,
             // Only set subscription_created_at for new subscriptions
             ...(isNewSubscription && subscription.created && {
               subscription_created_at: new Date(subscription.created * 1000).toISOString()

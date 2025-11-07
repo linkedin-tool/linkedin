@@ -42,6 +42,8 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [creatingCheckout, setCreatingCheckout] = useState(false)
+  const [creatingProCheckout, setCreatingProCheckout] = useState(false)
+  const [creatingTeamCheckout, setCreatingTeamCheckout] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [progressDemo, setProgressDemo] = useState(0)
   const [showDemo, setShowDemo] = useState(false)
@@ -272,31 +274,48 @@ export default function HomePage() {
     }
 
     // User is logged in - check subscription status
-    if (userProfile.subscription_status === 'active') {
-      alert('Du har allerede et gyldigt abonnement!')
+    if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'pro') {
+      alert('Du har allerede et Pro abonnement!')
       return
     }
 
-    // User has canceled/no subscription - create checkout session directly
-    setCreatingCheckout(true)
+    setCreatingProCheckout(true)
     
     try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userProfile.email,
-          name: userProfile.name,
-          phone: '',
-        }),
-      })
+      let response
+      
+      if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team') {
+        // Downgrade from Team to Pro
+        response = await fetch('/api/upgrade-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customerId: userProfile.stripe_customer_id,
+            newPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || 'price_1SCksuFZKXWbK8kLSpayi0jf',
+            upgradeType: 'downgrade'
+          }),
+        })
+      } else {
+        // Create new Pro subscription
+        response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userProfile.email,
+            name: userProfile.name,
+            plan: 'pro'
+          }),
+        })
+      }
 
       const data = await response.json()
       
       if (response.ok) {
-        // Redirect to Stripe Checkout
+        // Redirect to Stripe Checkout or success page
         window.location.href = data.url || `https://checkout.stripe.com/pay/${data.sessionId}`
       } else {
         alert('Fejl ved oprettelse af betaling: ' + data.error)
@@ -305,20 +324,96 @@ export default function HomePage() {
       console.error('Checkout error:', error)
       alert('Der skete en fejl ved oprettelse af betaling')
     } finally {
-      setCreatingCheckout(false)
+      setCreatingProCheckout(false)
     }
   }
 
   const getProButtonText = () => {
     if (loading) return 'Indlæser...'
-    if (creatingCheckout) return 'Opretter betaling...'
+    if (creatingProCheckout) return 'Opretter betaling...'
     if (!user) return 'Vælg Pro'
-    if (userProfile?.subscription_status === 'active') return 'Du har allerede Pro'
-    return 'Genaktiver Pro'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Du har allerede Pro'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Nedgradér til Pro'
+    return 'Vælg Pro'
   }
 
   const isProButtonDisabled = (): boolean => {
-    return loading || creatingCheckout || (user !== null && userProfile?.subscription_status === 'active')
+    return loading || creatingProCheckout || (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro')
+  }
+
+  const handleTeamClick = async () => {
+    if (!user || !userProfile) {
+      // Not logged in - go to signup
+      window.location.href = '/auth/signup?plan=team'
+      return
+    }
+
+    // User is logged in - check subscription status
+    if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team') {
+      alert('Du har allerede et Team abonnement!')
+      return
+    }
+
+    setCreatingTeamCheckout(true)
+    
+    try {
+      let response
+      
+      if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'pro') {
+        // Upgrade from Pro to Team - should go to Stripe for payment
+        response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userProfile.email,
+            name: userProfile.name,
+            plan: 'team',
+            isUpgrade: true
+          }),
+        })
+      } else {
+        // Create new Team subscription
+        response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userProfile.email,
+            name: userProfile.name,
+            plan: 'team'
+          }),
+        })
+      }
+
+      const data = await response.json()
+      
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error || 'Fejl ved oprettelse af betaling')
+      }
+    } catch (error) {
+      console.error('Error creating Team checkout:', error)
+      alert('Der opstod en fejl. Prøv igen.')
+    } finally {
+      setCreatingTeamCheckout(false)
+    }
+  }
+
+  const getTeamButtonText = () => {
+    if (loading) return 'Indlæser...'
+    if (creatingTeamCheckout) return 'Opretter betaling...'
+    if (!user) return 'Vælg Team'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Du har allerede Team'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Opgradér til Team'
+    return 'Vælg Team'
+  }
+
+  const isTeamButtonDisabled = (): boolean => {
+    return loading || creatingTeamCheckout || (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team')
   }
 
   const handleFreeTrialClick = async () => {
@@ -855,7 +950,7 @@ export default function HomePage() {
                 Prøv gratis i 7 dage - ingen binding eller skjulte omkostninger
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <Card className="p-8 bg-white border border-gray-100 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Gratis prøveperiode</h3>
@@ -942,6 +1037,51 @@ export default function HomePage() {
                     disabled={isProButtonDisabled()}
                   >
                     {getProButtonText()}
+                  </Button>
+                </div>
+              </Card>
+              <Card className="p-8 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Team</h3>
+                  <p className="text-gray-600 mb-6">For virksomheder og teams</p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-gray-900">999 kr</span>
+                    <span className="text-gray-600">/måned</span>
+                  </div>
+                  <ul className="space-y-4 mb-8">
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
+                      <span className="text-gray-700">Alle Pro funktioner</span>
+                    </li>
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
+                      <span className="text-gray-700">Team medlemmer</span>
+                    </li>
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
+                      <span className="text-gray-700">Tildel opslag til medarbejdere</span>
+                    </li>
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                      </div>
+                      <span className="text-gray-700">Centraliseret content styring</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-auto">
+                  <Button 
+                    className="w-full px-8 h-11 bg-gradient-to-r from-purple-800 to-purple-700 hover:from-purple-900 hover:to-purple-800 text-white rounded-full font-semibold shadow-lg transition-all duration-200" 
+                    onClick={handleTeamClick}
+                    disabled={isTeamButtonDisabled()}
+                  >
+                    {getTeamButtonText()}
                   </Button>
                 </div>
               </Card>

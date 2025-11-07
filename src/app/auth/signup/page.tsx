@@ -20,9 +20,10 @@ function SignupForm() {
   const searchParams = useSearchParams()
   const supabase = createClient()
   
-  // Check if user is signing up for Pro plan or free trial
+  // Check if user is signing up for Pro plan, Team plan, or free trial
   const selectedPlan = searchParams.get('plan')
   const isPro = selectedPlan === 'pro'
+  const isTeam = selectedPlan === 'team'
   const isFreeTrial = selectedPlan === 'free_trial'
 
   const handleStripeCheckout = async () => {
@@ -35,6 +36,7 @@ function SignupForm() {
         body: JSON.stringify({
           email,
           name,
+          plan: selectedPlan,
         }),
       })
 
@@ -100,9 +102,9 @@ function SignupForm() {
             name,
             email,
             phone: null, // Set to null since we removed the phone field
-            subscription_plan: isPro ? 'pro' : 'free_trial',
-            subscription_status: isPro ? 'inactive' : 'trialing', // Pro users will get 'active' after Stripe payment
-            trial_end: isPro ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now for free trial
+            subscription_plan: isPro ? 'pro' : isTeam ? 'team' : 'free_trial',
+            subscription_status: (isPro || isTeam) ? 'inactive' : 'trialing', // Pro/Team users will get 'active' after Stripe payment
+            trial_end: (isPro || isTeam) ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now for free trial
           })
 
         if (userError) {
@@ -111,8 +113,8 @@ function SignupForm() {
           return
         }
 
-        // If Pro plan is selected, redirect to Stripe checkout
-        if (isPro) {
+        // If Pro or Team plan is selected, redirect to Stripe checkout
+        if (isPro || isTeam) {
           await handleStripeCheckout()
         } else {
           // For free trial, redirect directly to dashboard
@@ -139,7 +141,7 @@ function SignupForm() {
             </span>
           </Link>
           <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            {isPro ? 'Opret din Pro konto' : isFreeTrial ? 'Start din gratis prøveperiode' : 'Opret din konto'}
+            {isPro ? 'Opret din Pro konto' : isTeam ? 'Opret din Team konto' : isFreeTrial ? 'Start din gratis prøveperiode' : 'Opret din konto'}
           </h2>
           {isPro && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-3xl">
@@ -148,6 +150,16 @@ function SignupForm() {
               </p>
               <p className="text-center text-xs text-blue-600 mt-1">
                 299 kr/måned • Alle funktioner • Prioriteret support
+              </p>
+            </div>
+          )}
+          {isTeam && (
+            <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-3xl">
+              <p className="text-center text-sm text-purple-800">
+                <strong>Team Plan valgt</strong> - Du vil blive ført til betaling efter registrering
+              </p>
+              <p className="text-center text-xs text-purple-600 mt-1">
+                999 kr/måned • Alle Pro funktioner + Team medlemmer
               </p>
             </div>
           )}

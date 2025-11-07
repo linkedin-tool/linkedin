@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe'
+import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name } = await request.json()
+    const { email, name, plan, isUpgrade } = await request.json()
 
     if (!email || !name) {
       return NextResponse.json(
@@ -11,6 +11,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Determine which price ID to use
+    const priceId = plan === 'team' ? STRIPE_PRICE_ID_TEAM : STRIPE_PRICE_ID
 
     // Create or retrieve Stripe customer
     let customer
@@ -28,13 +31,44 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create Stripe checkout session
+    // If this is an upgrade, update existing subscription instead of creating new checkout
+    if (isUpgrade && customer) {
+      // Get customer's current subscription
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active',
+        limit: 1
+      })
+
+      if (subscriptions.data.length > 0) {
+        const subscription = subscriptions.data[0]
+        const subscriptionItem = subscription.items.data[0]
+
+        // Update subscription with new price
+        const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+          items: [{
+            id: subscriptionItem.id,
+            price: priceId,
+          }],
+          proration_behavior: 'create_prorations',
+          billing_cycle_anchor: 'unchanged'
+        })
+
+        return NextResponse.json({ 
+          success: true, 
+          subscription: updatedSubscription,
+          url: `/dashboard?upgraded=upgrade`
+        })
+      }
+    }
+
+    // Create Stripe checkout session for new subscriptions
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       payment_method_types: ['card'],
       line_items: [
         {
-          price: STRIPE_PRICE_ID,
+          price: priceId,
           quantity: 1,
         },
       ],
