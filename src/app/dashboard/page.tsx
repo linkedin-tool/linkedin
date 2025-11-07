@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { 
+import {
   FileText, 
   TrendingUp, 
   Crown, 
@@ -14,7 +14,6 @@ import {
   X,
   PlusCircle,
   Clock,
-  Link as LinkIcon,
   BarChart3,
   Building2
 } from 'lucide-react'
@@ -49,7 +48,6 @@ interface LinkedInStats {
   totalPosts: number
   scheduledPosts: number
   publishedThisMonth: number
-  linkedinConnected: boolean
 }
 
 
@@ -61,8 +59,7 @@ function DashboardContent() {
   const [linkedinStats, setLinkedinStats] = useState<LinkedInStats>({
     totalPosts: 0,
     scheduledPosts: 0,
-    publishedThisMonth: 0,
-    linkedinConnected: false
+    publishedThisMonth: 0
   })
   const [recentPosts, setRecentPosts] = useState<LinkedInPost[]>([])
   const [upcomingPosts, setUpcomingPosts] = useState<LinkedInPost[]>([])
@@ -163,8 +160,7 @@ function DashboardContent() {
           setLinkedinStats({
             totalPosts: postsData.length,
             scheduledPosts: scheduledPosts.length,
-            publishedThisMonth: publishedThisMonth.length,
-            linkedinConnected: postsData.length > 0 // Simple check - if they have posts, they're connected
+            publishedThisMonth: publishedThisMonth.length
           })
 
           // Recent posts (last 5 published)
@@ -181,16 +177,7 @@ function DashboardContent() {
           setUpcomingPosts(upcoming)
         }
 
-        // Check LinkedIn connection
-        const { data: linkedinProfile } = await supabase
-          .from('linkedin_profiles' as any)
-          .select('id')
-          .eq('user_id', user.id)
-          .single()
-
-        if (linkedinProfile) {
-          setLinkedinStats(prev => ({ ...prev, linkedinConnected: true }))
-        }
+        // LinkedIn connection status is handled by individual components when needed
 
       } catch (error) {
         console.error('Error fetching LinkedIn data:', error)
@@ -408,24 +395,18 @@ function DashboardContent() {
           </div>
         </Card>
 
-        {/* LinkedIn Connection */}
+        {/* Quick Actions */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">LinkedIn status</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {linkedinStats.linkedinConnected ? '✓' : '✗'}
-              </p>
+              <p className="text-sm font-medium text-gray-600">Hurtige handlinger</p>
+              <p className="text-3xl font-bold text-gray-900">⚡</p>
               <p className="text-sm text-gray-500 mt-1">
-                {linkedinStats.linkedinConnected ? 'Tilsluttet' : 'Ikke tilsluttet'}
+                Opret nyt indhold
               </p>
             </div>
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-              linkedinStats.linkedinConnected ? 'bg-blue-100' : 'bg-gray-100'
-            }`}>
-              <LinkIcon className={`h-6 w-6 ${
-                linkedinStats.linkedinConnected ? 'text-blue-600' : 'text-gray-400'
-              }`} />
+            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <PlusCircle className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </Card>
@@ -527,23 +508,16 @@ function DashboardContent() {
           </Card>
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <Link href="/dashboard/integration" className="block">
+            <Link href="/dashboard/ny-ide" className="block">
               <div className="text-center">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 ${
-                  linkedinStats.linkedinConnected ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
-                  <LinkIcon className={`w-6 h-6 ${
-                    linkedinStats.linkedinConnected ? 'text-blue-600' : 'text-gray-400'
-                  }`} />
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-green-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">
-                  {linkedinStats.linkedinConnected ? 'LinkedIn tilsluttet' : 'Tilslut LinkedIn'}
+                  Ny Idé
                 </h4>
                 <p className="text-sm text-gray-600">
-                  {linkedinStats.linkedinConnected 
-                    ? 'Administrer din LinkedIn integration' 
-                    : 'Forbind din LinkedIn konto for at komme i gang'
-                  }
+                  Opret en ny idé til dit indhold
                 </p>
               </div>
             </Link>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLinkedInStatus } from "@/hooks/useLinkedInStatus";
 
 export function LinkedInNotificationBanner() {
-  const { needsRenewal, daysUntilExpiry, isTokenValid, isConnected } = useLinkedInStatus();
+  const { needsRenewal, daysUntilExpiry, isTokenValid, isConnected } = useLinkedInStatus(true); // Only show when LinkedIn is relevant
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Don't show if not connected, dismissed, or doesn't need renewal

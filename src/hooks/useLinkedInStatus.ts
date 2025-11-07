@@ -20,7 +20,7 @@ interface LinkedInStatus {
   needsRenewal: boolean; // True if expires within 7 days
 }
 
-export function useLinkedInStatus(): LinkedInStatus {
+export function useLinkedInStatus(enabled: boolean = true): LinkedInStatus {
   const [status, setStatus] = useState<LinkedInStatus>({
     isConnected: false,
     isTokenValid: false,
@@ -33,6 +33,8 @@ export function useLinkedInStatus(): LinkedInStatus {
   const supabase = createClient();
 
   useEffect(() => {
+    if (!enabled) return;
+    
     const checkLinkedInStatus = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -41,10 +43,10 @@ export function useLinkedInStatus(): LinkedInStatus {
         }
 
         const { data: profile, error } = await supabase
-          .from("linkedin_profiles" as any)
+          .from("linkedin_profiles")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (profile && !error) {
           const profileData = profile as any;
@@ -64,6 +66,7 @@ export function useLinkedInStatus(): LinkedInStatus {
             needsRenewal,
           });
         } else {
+          // No LinkedIn profile found - this is normal, not an error
           setStatus({
             isConnected: false,
             isTokenValid: false,
@@ -74,7 +77,16 @@ export function useLinkedInStatus(): LinkedInStatus {
           });
         }
       } catch (error) {
-        console.error("Error checking LinkedIn status:", error);
+        // Only log actual errors, not missing profiles
+        console.error("Unexpected error checking LinkedIn status:", error);
+        setStatus({
+          isConnected: false,
+          isTokenValid: false,
+          daysUntilExpiry: 0,
+          expiryDate: null,
+          profile: null,
+          needsRenewal: false,
+        });
       }
     };
 
@@ -84,7 +96,7 @@ export function useLinkedInStatus(): LinkedInStatus {
     const interval = setInterval(checkLinkedInStatus, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [supabase]);
+  }, [supabase, enabled]);
 
   return status;
 }

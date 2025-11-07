@@ -36,10 +36,10 @@ export default function IntegrationPage() {
         }
 
         const { data: profile, error } = await supabase
-          .from("linkedin_profiles" as any)
+          .from("linkedin_profiles")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (profile && !error) {
           const profileData = profile as any;
@@ -53,7 +53,8 @@ export default function IntegrationPage() {
           }
         }
       } catch (error) {
-        console.error("Error checking LinkedIn connection:", error);
+        // Only log unexpected errors, not missing profiles
+        console.error("Unexpected error checking LinkedIn connection:", error);
       } finally {
         setLoading(false);
       }
