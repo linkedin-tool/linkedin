@@ -59,24 +59,27 @@ export async function POST(request: NextRequest) {
         url: `/dashboard?upgraded=upgrade`
       })
     } else {
-      // For downgrades, schedule the change for end of current period
+      // For downgrades, create a subscription schedule that maintains current plan until period end
       const currentItems = subscription.items.data.map((item: any) => ({
         price: item.price.id,
         quantity: item.quantity ?? 1,
       }))
 
-      // Create a subscription schedule that maintains current plan until period end
+      // Create subscription schedule from existing subscription
       const schedule = await stripe.subscriptionSchedules.create({
         from_subscription: subscription.id,
+        end_behavior: 'release', // Release subscription from schedule after completion
         phases: [
           {
+            // Phase 1: Keep current plan until period end
             items: currentItems,
-            end_date: subscription.current_period_end, // Run current period to completion
-            proration_behavior: 'none',
+            end_date: subscription.current_period_end,
+            proration_behavior: 'none', // No prorations for current phase
           },
           {
+            // Phase 2: Switch to new plan from next billing cycle
             items: [{ price: newPriceId, quantity: 1 }],
-            // Next phase starts at period end with new price
+            proration_behavior: 'none', // No prorations when transitioning to new plan
           },
         ],
       })
