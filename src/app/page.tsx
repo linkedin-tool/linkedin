@@ -293,7 +293,7 @@ export default function HomePage() {
           },
           body: JSON.stringify({
             customerId: userProfile.stripe_customer_id,
-            newPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || 'price_1SCksuFZKXWbK8kLSpayi0jf',
+            targetPlan: 'pro',
             upgradeType: 'downgrade'
           }),
         })
@@ -433,7 +433,7 @@ export default function HomePage() {
   const getFreeTrialButtonText = () => {
     if (loading) return 'Indlæser...'
     if (!user) return 'Start gratis'
-    return 'Gå til dashboard'
+    return 'Allerede bruger'
   }
 
   return (

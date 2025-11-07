@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, newPriceId, upgradeType } = await request.json()
+    const { customerId, targetPlan, upgradeType } = await request.json()
 
-    if (!customerId || !newPriceId || !upgradeType) {
+    if (!customerId || !targetPlan || !upgradeType) {
       return NextResponse.json(
-        { error: 'Customer ID, price ID og upgrade type er påkrævet' },
+        { error: 'Customer ID, target plan og upgrade type er påkrævet' },
+        { status: 400 }
+      )
+    }
+
+    // Determine price ID based on target plan
+    let newPriceId: string
+    if (targetPlan === 'pro') {
+      newPriceId = STRIPE_PRICE_ID
+    } else if (targetPlan === 'team') {
+      newPriceId = STRIPE_PRICE_ID_TEAM
+    } else {
+      return NextResponse.json(
+        { error: 'Ugyldig target plan. Skal være "pro" eller "team"' },
         { status: 400 }
       )
     }
