@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           // Check if schedule was cancelled (schedule went from existing to null)
           const previousSchedule = event.data.previous_attributes?.schedule
           const currentSchedule = subscription.schedule
-          const scheduleCancelled = previousSchedule && !currentSchedule && currentUser.scheduled_downgrade_to
+          const scheduleCancelled = previousSchedule && !currentSchedule && currentUser?.scheduled_downgrade_to
           
           const shouldClearScheduledDowngrade = planChangeDowngrade || scheduleCancelled
 
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
           if (shouldClearScheduledDowngrade) {
             if (planChangeDowngrade) {
-              console.log('Plan changed from', currentUser.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade')
+              console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade')
             } else if (scheduleCancelled) {
               console.log('Schedule cancelled (', previousSchedule, '→ null) - clearing scheduled downgrade from database')
             }
