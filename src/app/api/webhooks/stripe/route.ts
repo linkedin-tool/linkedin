@@ -73,17 +73,16 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // First get current user data to check if plan actually changed
+          // Get current user data to check if plan actually changed
           const { data: currentUser } = await supabase
             .from('users')
-            .select('subscription_plan, scheduled_downgrade_to, scheduled_downgrade_date')
+            .select('subscription_plan')
             .eq('stripe_customer_id', subscription.customer)
             .single()
 
           // Only clear scheduled downgrade if the plan actually changed (downgrade completed)
-          // Schedule creation/cancellation is now handled by subscription_schedule.updated webhook
+          // All other schedule handling is done by subscription_schedule.updated webhook
           const planChanged = currentUser && currentUser.subscription_plan !== subscriptionPlan
-          const shouldClearScheduledDowngrade = planChanged && currentUser?.scheduled_downgrade_to
 
           const updateData = {
             stripe_customer_id: subscription.customer,
@@ -93,9 +92,12 @@ export async function POST(request: NextRequest) {
             next_billing_date: nextBillingDate,
             cancel_at_period_end: subscription.cancel_at_period_end || subscription.cancel_at ? true : false,
             subscription_plan: subscriptionPlan,
-            // Handle scheduled downgrade info - clear if needed, preserve if not
-            scheduled_downgrade_to: shouldClearScheduledDowngrade ? null : currentUser?.scheduled_downgrade_to,
-            scheduled_downgrade_date: shouldClearScheduledDowngrade ? null : currentUser?.scheduled_downgrade_date,
+            // Clear scheduled downgrade ONLY when plan actually changes (downgrade completed)
+            // All other schedule handling is done by subscription_schedule.updated webhook
+            ...(planChanged && {
+              scheduled_downgrade_to: null,
+              scheduled_downgrade_date: null,
+            }),
             // Only set subscription_created_at for new subscriptions
             ...(isNewSubscription && subscription.created && {
               subscription_created_at: new Date(subscription.created * 1000).toISOString()
@@ -106,10 +108,10 @@ export async function POST(request: NextRequest) {
             })
           }
 
-          if (shouldClearScheduledDowngrade) {
+          if (planChanged) {
             console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade (downgrade completed)')
           } else {
-            console.log('Plan unchanged - preserving scheduled downgrade info (schedule events handled by subscription_schedule.updated)')
+            console.log('Plan unchanged - not touching scheduled downgrade fields (handled by subscription_schedule.updated)')
           }
           
           console.log('Webhook update data:', updateData)
