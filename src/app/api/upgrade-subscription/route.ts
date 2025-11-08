@@ -151,19 +151,31 @@ export async function POST(request: NextRequest) {
         ],
       })
 
-      // Save scheduled downgrade info to Supabase
-      await supabase
-        .from('users')
-        .update({
-          scheduled_downgrade_to: targetPlan,
-          scheduled_downgrade_date: userData.current_period_end
-        })
-        .eq('stripe_customer_id', customerId)
+      // Try to save scheduled downgrade info to Supabase immediately
+      // But don't fail if it doesn't work - webhook will handle it as backup
+      try {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            scheduled_downgrade_to: targetPlan,
+            scheduled_downgrade_date: userData.current_period_end
+          })
+          .eq('stripe_customer_id', customerId)
 
+        if (updateError) {
+          console.error('Database update failed, webhook will handle it:', updateError)
+        } else {
+          console.log('Successfully saved scheduled downgrade to database')
+        }
+      } catch (dbError) {
+        console.error('Database connection failed, webhook will handle it:', dbError)
+      }
+
+      // Always return success with URL params as fallback for immediate UI feedback
       return NextResponse.json({
         success: true,
         schedule: updatedSchedule,
-        url: `/dashboard?downgraded=${targetPlan}&effective_date=${userData.current_period_end}`
+        url: `/dashboard?downgraded=${targetPlan}&effective_date=${encodeURIComponent(userData.current_period_end)}&schedule_id=${updatedSchedule.id}`
       })
     }
   } catch (error: any) {

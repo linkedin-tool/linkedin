@@ -505,11 +505,21 @@ export default function SettingsPage() {
                   if (targetPlan && effectiveDate) {
                     const targetPlanText = targetPlan === 'pro' ? 'Pro' : 'Team'
                     const currentPlan = userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'
-                    const date = new Date(effectiveDate).toLocaleDateString('da-DK', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })
+                    
+                    // Safely parse the date
+                    let date = 'Invalid Date'
+                    try {
+                      const parsedDate = new Date(effectiveDate)
+                      if (!isNaN(parsedDate.getTime())) {
+                        date = parsedDate.toLocaleDateString('da-DK', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      }
+                    } catch (error) {
+                      console.error('Error parsing effective date:', effectiveDate, error)
+                    }
                     
                     return (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

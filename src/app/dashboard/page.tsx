@@ -255,17 +255,23 @@ function DashboardContent() {
               </div>
               <div>
                 {(() => {
-                  // First check database for persistent scheduled downgrade
+                  // Check both database and URL params for scheduled downgrade
+                  // URL params provide immediate feedback, database provides persistence
                   let targetPlan = userProfile?.scheduled_downgrade_to
                   let effectiveDate = userProfile?.scheduled_downgrade_date
+                  let isFromUrl = false
                   
-                  // Fallback to URL params for immediate feedback after scheduling
-                  if (!targetPlan || !effectiveDate) {
-                    const downgraded = searchParams.get('downgraded')
-                    const urlEffectiveDate = searchParams.get('effective_date')
-                    if (downgraded && urlEffectiveDate) {
+                  // If no database data, or if we have fresh URL params, use URL params
+                  const downgraded = searchParams.get('downgraded')
+                  const urlEffectiveDate = searchParams.get('effective_date')
+                  const scheduleId = searchParams.get('schedule_id')
+                  
+                  if (downgraded && urlEffectiveDate) {
+                    // Use URL params if we don't have database data, or if this is a fresh schedule
+                    if (!targetPlan || !effectiveDate || scheduleId) {
                       targetPlan = downgraded
                       effectiveDate = urlEffectiveDate
+                      isFromUrl = true
                     }
                   }
                   
@@ -273,11 +279,21 @@ function DashboardContent() {
                   
                   if (targetPlan && effectiveDate) {
                     const targetPlanText = targetPlan === 'pro' ? 'Pro' : 'Team'
-                    const date = new Date(effectiveDate).toLocaleDateString('da-DK', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })
+                    
+                    // Safely parse the date
+                    let date = 'Invalid Date'
+                    try {
+                      const parsedDate = new Date(effectiveDate)
+                      if (!isNaN(parsedDate.getTime())) {
+                        date = parsedDate.toLocaleDateString('da-DK', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      }
+                    } catch (error) {
+                      console.error('Error parsing effective date:', effectiveDate, error)
+                    }
                     return (
                       <>
                         <h3 className="text-xl font-bold text-gray-900">
@@ -285,6 +301,11 @@ function DashboardContent() {
                         </h3>
                         <p className="text-gray-700 mt-1">
                           Du beholder dine {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} rettigheder til {date}. Derefter skifter du til {targetPlanText} plan.
+                          {isFromUrl && (
+                            <span className="text-xs text-blue-600 block mt-1">
+                              ⏳ Bekræftelse behandles...
+                            </span>
+                          )}
                         </p>
                       </>
                     )
