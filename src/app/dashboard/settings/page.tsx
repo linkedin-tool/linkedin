@@ -310,7 +310,6 @@ export default function SettingsPage() {
     if (!userProfile) return
 
     const isUpgrade = selectedTeamSeats > currentTeamSeats
-    const isDowngrade = selectedTeamSeats < currentTeamSeats
     
     if (userProfile.subscription_plan === 'pro') {
       // Upgrade from Pro to Team

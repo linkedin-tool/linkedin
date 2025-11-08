@@ -17,7 +17,6 @@ import {
   Mic,
   TrendingUp,
   ChevronDown,
-  ChevronUp,
   ChevronLeft,
   ChevronRight,
   Play,
@@ -45,7 +44,6 @@ export default function HomePage() {
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [creatingCheckout, setCreatingCheckout] = useState(false)
   const [creatingProCheckout, setCreatingProCheckout] = useState(false)
   const [creatingTeamCheckout, setCreatingTeamCheckout] = useState(false)
   const [selectedSeats, setSelectedSeats] = useState(5)

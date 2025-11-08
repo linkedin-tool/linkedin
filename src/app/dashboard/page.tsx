@@ -265,7 +265,6 @@ function DashboardContent() {
                   // If no database data, or if we have fresh URL params, use URL params
                   const downgraded = searchParams.get('downgraded')
                   const urlEffectiveDate = searchParams.get('effective_date')
-                  const scheduleId = searchParams.get('schedule_id')
                   
                   if (downgraded && urlEffectiveDate) {
                     // Only use URL params if we don't have database data
@@ -276,8 +275,6 @@ function DashboardContent() {
                     }
                     // If we have database data, prefer that (isFromUrl stays false)
                   }
-                  
-                  const upgraded = searchParams.get('upgraded')
                   
                   if (targetPlan && effectiveDate) {
                     const targetPlanText = targetPlan === 'pro' ? 'Pro' : 'Team'

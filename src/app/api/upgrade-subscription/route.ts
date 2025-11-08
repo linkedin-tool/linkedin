@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
       
       // Use the most recent subscription and cancel older duplicates
       subscriptions.data.sort((a, b) => b.created - a.created)
-      const newestSubscription = subscriptions.data[0]
       const olderSubscriptions = subscriptions.data.slice(1)
       
       // Cancel older duplicate subscriptions
@@ -57,8 +56,8 @@ export async function POST(request: NextRequest) {
         try {
           console.log('🗑️ Cancelling duplicate subscription:', oldSub.id)
           await stripe.subscriptions.cancel(oldSub.id)
-        } catch (error) {
-          console.error('Error cancelling duplicate subscription:', oldSub.id, error)
+        } catch (cancelError) {
+          console.error('Error cancelling duplicate subscription:', oldSub.id, cancelError)
         }
       }
     }
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
           // Schedule exists but is not active (completed/canceled/released)
           console.log(`Schedule exists but is ${existingSchedule.status}, proceeding with new schedule...`)
         }
-      } catch (error) {
+      } catch {
         // Schedule might not exist or be accessible, proceed normally
         console.log('Could not retrieve existing schedule, proceeding with new schedule...')
       }
@@ -120,7 +119,7 @@ export async function POST(request: NextRequest) {
       const currentPriceId = subscriptionItem.price.id
       const isSamePlan = currentPriceId === newPriceId
       
-      let updateData: any = {
+      const updateData: any = {
         items: [{
           id: subscriptionItem.id,
           quantity: finalQuantity,
