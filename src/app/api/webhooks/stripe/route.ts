@@ -80,16 +80,10 @@ export async function POST(request: NextRequest) {
             .eq('stripe_customer_id', subscription.customer)
             .single()
 
-          // Check if scheduled downgrade should be cleared
+          // Only clear scheduled downgrade if the plan actually changed (downgrade completed)
+          // Schedule creation/cancellation is now handled by subscription_schedule.updated webhook
           const planChanged = currentUser && currentUser.subscription_plan !== subscriptionPlan
-          const planChangeDowngrade = planChanged && currentUser.scheduled_downgrade_to
-          
-          // Check if schedule was cancelled (schedule went from existing to null)
-          const previousSchedule = event.data.previous_attributes?.schedule
-          const currentSchedule = subscription.schedule
-          const scheduleCancelled = previousSchedule && !currentSchedule && currentUser?.scheduled_downgrade_to
-          
-          const shouldClearScheduledDowngrade = planChangeDowngrade || scheduleCancelled
+          const shouldClearScheduledDowngrade = planChanged && currentUser?.scheduled_downgrade_to
 
           const updateData = {
             stripe_customer_id: subscription.customer,
@@ -113,13 +107,9 @@ export async function POST(request: NextRequest) {
           }
 
           if (shouldClearScheduledDowngrade) {
-            if (planChangeDowngrade) {
-              console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade')
-            } else if (scheduleCancelled) {
-              console.log('Schedule cancelled (', previousSchedule, '→ null) - clearing scheduled downgrade from database')
-            }
+            console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade (downgrade completed)')
           } else {
-            console.log('Plan unchanged and no schedule cancellation - preserving scheduled downgrade info')
+            console.log('Plan unchanged - preserving scheduled downgrade info (schedule events handled by subscription_schedule.updated)')
           }
           
           console.log('Webhook update data:', updateData)
@@ -232,6 +222,87 @@ export async function POST(request: NextRequest) {
           if (error) {
             console.error('Error updating payment failure:', error)
           }
+        }
+        break
+      }
+
+      case 'subscription_schedule.updated': {
+        console.log(`Processing subscription schedule event: ${event.type}`)
+        try {
+          const schedule = event.data.object as any
+          const customerId = schedule.customer
+          
+          // Determine what happened to the schedule
+          const currentStatus = schedule.status
+          const previousStatus = event.data.previous_attributes?.status
+          const currentPhases = schedule.phases
+          const previousPhases = event.data.previous_attributes?.phases
+          
+          console.log('Schedule status:', previousStatus, '→', currentStatus)
+          console.log('Schedule phases changed:', !!previousPhases)
+          
+          // Handle schedule creation/update (new downgrade scheduled)
+          if (currentStatus === 'active' && currentPhases && currentPhases.length >= 2) {
+            // Extract downgrade info from phases
+            const firstPhase = currentPhases[0]
+            const secondPhase = currentPhases[1]
+            
+            // Determine target plan from second phase price
+            let targetPlan = 'pro' // default
+            if (secondPhase?.items?.[0]?.price === STRIPE_PRICE_ID_TEAM) {
+              targetPlan = 'team'
+            } else if (secondPhase?.items?.[0]?.price === STRIPE_PRICE_ID) {
+              targetPlan = 'pro'
+            }
+            
+            // Get end date of first phase (when downgrade happens)
+            const downgradeDateTimestamp = firstPhase?.end_date
+            const downgradeDate = downgradeDateTimestamp ? new Date(downgradeDateTimestamp * 1000).toISOString() : null
+            
+            if (downgradeDate) {
+              console.log('Scheduled downgrade detected:', targetPlan, 'on', downgradeDate)
+              
+              // Update user with scheduled downgrade info
+              const { error } = await supabase
+                .from('users')
+                .update({
+                  scheduled_downgrade_to: targetPlan,
+                  scheduled_downgrade_date: downgradeDate
+                })
+                .eq('stripe_customer_id', customerId)
+              
+              if (error) {
+                console.error('Error saving scheduled downgrade from schedule webhook:', error)
+              } else {
+                console.log('Successfully saved scheduled downgrade from schedule webhook')
+              }
+            }
+          }
+          
+          // Handle schedule cancellation/release
+          else if ((currentStatus === 'released' || currentStatus === 'canceled') && 
+                   (previousStatus === 'active')) {
+            console.log('Schedule cancelled/released - clearing scheduled downgrade')
+            
+            // Clear scheduled downgrade info
+            const { error } = await supabase
+              .from('users')
+              .update({
+                scheduled_downgrade_to: null,
+                scheduled_downgrade_date: null
+              })
+              .eq('stripe_customer_id', customerId)
+            
+            if (error) {
+              console.error('Error clearing scheduled downgrade from schedule webhook:', error)
+            } else {
+              console.log('Successfully cleared scheduled downgrade from schedule webhook')
+            }
+          }
+          
+        } catch (scheduleError) {
+          console.error('Error in subscription schedule webhook handler:', scheduleError)
+          throw scheduleError
         }
         break
       }
