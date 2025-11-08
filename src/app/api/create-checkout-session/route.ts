@@ -93,6 +93,13 @@ export async function POST(request: NextRequest) {
         {
           price: priceId,
           quantity: quantity,
+          ...(plan === 'team' && {
+            adjustable_quantity: {
+              enabled: true,
+              minimum: 3,
+              maximum: 50,
+            }
+          })
         },
       ],
       mode: 'subscription',
