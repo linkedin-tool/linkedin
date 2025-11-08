@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: 'active',
-      limit: 1
+      limit: 10 // Get more to check for duplicates
     })
 
     if (subscriptions.data.length === 0) {
@@ -41,6 +41,26 @@ export async function POST(request: NextRequest) {
         { error: 'Ingen aktiv subscription fundet' },
         { status: 404 }
       )
+    }
+    
+    // Check for multiple active subscriptions (potential problem)
+    if (subscriptions.data.length > 1) {
+      console.warn('⚠️ Customer has multiple active subscriptions:', customerId, subscriptions.data.map(s => ({ id: s.id, status: s.status, created: s.created, items: s.items.data.map(i => ({ price: i.price.id, quantity: i.quantity })) })))
+      
+      // Use the most recent subscription and cancel older duplicates
+      subscriptions.data.sort((a, b) => b.created - a.created)
+      const newestSubscription = subscriptions.data[0]
+      const olderSubscriptions = subscriptions.data.slice(1)
+      
+      // Cancel older duplicate subscriptions
+      for (const oldSub of olderSubscriptions) {
+        try {
+          console.log('🗑️ Cancelling duplicate subscription:', oldSub.id)
+          await stripe.subscriptions.cancel(oldSub.id)
+        } catch (error) {
+          console.error('Error cancelling duplicate subscription:', oldSub.id, error)
+        }
+      }
     }
 
     // Get full subscription details
@@ -96,16 +116,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (upgradeType === 'upgrade') {
-      // For upgrades, update subscription immediately with proration (old working code)
-      const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+      // For upgrades, update subscription immediately with proration
+      const currentPriceId = subscriptionItem.price.id
+      const isSamePlan = currentPriceId === newPriceId
+      
+      let updateData: any = {
         items: [{
           id: subscriptionItem.id,
-          price: newPriceId,
           quantity: finalQuantity,
         }],
         proration_behavior: 'create_prorations',
         billing_cycle_anchor: 'unchanged'
-      })
+      }
+      
+      // Only update price if it's actually changing (different plan)
+      if (!isSamePlan) {
+        updateData.items[0].price = newPriceId
+      }
+      
+      console.log('Updating subscription:', subscription.id, 'Same plan:', isSamePlan, 'Current price:', currentPriceId, 'New price:', newPriceId, 'Quantity:', finalQuantity)
+      
+      const updatedSubscription = await stripe.subscriptions.update(subscription.id, updateData)
 
       return NextResponse.json({
         success: true,
