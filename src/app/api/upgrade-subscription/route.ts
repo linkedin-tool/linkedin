@@ -60,82 +60,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if subscription already has a schedule
+    // Handle existing schedules - but only if they're actually active
     if (subscription.schedule) {
-      // If there's already a schedule, update it instead of creating a new one
-      if (upgradeType === 'downgrade') {
-        // Get current items from subscription
-        const currentItems = subscription.items.data.map((item: any) => ({
-          price: item.price.id,
-          quantity: item.quantity ?? 1,
-        }))
-
-        // Use current_period_end from Supabase (convert to Unix timestamp)
-        if (!userData.current_period_end) {
-          return NextResponse.json(
-            { error: 'Mangler periode information for abonnement' },
-            { status: 400 }
-          )
-        }
-        
-        const endDate = Math.floor(new Date(userData.current_period_end).getTime() / 1000)
-
-        // Get the existing schedule to see its current phases
+      try {
+        // Check if the schedule is actually active
         const existingSchedule = await stripe.subscriptionSchedules.retrieve(subscription.schedule)
-        const currentPhase = existingSchedule.phases.find((phase: any) => 
-          phase.start_date <= Math.floor(Date.now() / 1000) && 
-          (!phase.end_date || phase.end_date > Math.floor(Date.now() / 1000))
-        )
         
-        if (!currentPhase) {
-          return NextResponse.json(
-            { error: 'Kunne ikke finde nuværende fase i schedule' },
-            { status: 400 }
-          )
+        if (existingSchedule.status === 'active') {
+          if (upgradeType === 'upgrade') {
+            // For upgrades: Cancel existing active schedule and proceed with immediate upgrade
+            console.log('Cancelling existing active schedule for immediate upgrade...')
+            await stripe.subscriptionSchedules.cancel(subscription.schedule)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
+            Object.assign(subscription, refreshedSubscription)
+          } else {
+            // For downgrades: Replace existing active schedule with new one
+            console.log('Replacing existing active schedule with new downgrade schedule...')
+            await stripe.subscriptionSchedules.cancel(subscription.schedule)
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
+            Object.assign(subscription, refreshedSubscription)
+          }
+        } else {
+          // Schedule exists but is not active (completed/canceled/released)
+          console.log(`Schedule exists but is ${existingSchedule.status}, proceeding with new schedule...`)
         }
-        
-        // Update the existing schedule by modifying current phase and adding new phase
-        const updatedSchedule = await stripe.subscriptionSchedules.update(subscription.schedule, {
-          phases: [
-            // Keep the current phase with all its attributes, only modify end_date
-            {
-              items: currentPhase.items.map((item: any) => ({
-                price: item.price,
-                quantity: item.quantity || 1,
-              })),
-              start_date: currentPhase.start_date, // Keep original start_date
-              end_date: endDate,
-              proration_behavior: 'none',
-            },
-            // Add the new phase that starts when the current one ends
-            {
-              items: [{ price: newPriceId, quantity: 1 }],
-              proration_behavior: 'none',
-            },
-          ],
-        })
-
-        // Save scheduled downgrade info to Supabase
-        await supabase
-          .from('users')
-          .update({
-            scheduled_downgrade_to: targetPlan,
-            scheduled_downgrade_date: userData.current_period_end
-          })
-          .eq('stripe_customer_id', customerId)
-
-        return NextResponse.json({
-          success: true,
-          schedule: updatedSchedule,
-          url: `/dashboard?downgraded=${targetPlan}&effective_date=${userData.current_period_end}`
-        })
+      } catch (error) {
+        // Schedule might not exist or be accessible, proceed normally
+        console.log('Could not retrieve existing schedule, proceeding with new schedule...')
       }
-      
-      // For upgrades, cancel existing schedule and continue with normal flow
-      await stripe.subscriptionSchedules.cancel(subscription.schedule)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
-      Object.assign(subscription, refreshedSubscription)
     }
 
     if (upgradeType === 'upgrade') {
