@@ -350,42 +350,23 @@ export default function HomePage() {
   const getProButtonText = () => {
     if (loading) return 'Indlæser...'
     if (creatingProCheckout) {
-      // Different loading text based on user's current plan
-      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
-        return 'Planlægger nedgradering...'
-      }
       return 'Opretter betaling...'
     }
     if (!user) return 'Vælg Pro'
-    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Du har allerede Pro'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Dit nuværende plan'
     
-    // Check for scheduled downgrade to Pro
+    // Team users should not be able to downgrade from pricing page
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
-      if (userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date) {
-        // Format the date nicely
-        try {
-          const date = new Date(userProfile.scheduled_downgrade_date)
-          if (!isNaN(date.getTime())) {
-            const formattedDate = date.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })
-            return `Planlagt ${formattedDate}`
-          }
-        } catch (error) {
-          // Fallback if date parsing fails
-        }
-        return 'Nedgradering planlagt'
-      }
-      return 'Nedgradér til Pro'
+      return null // Will show custom text instead of button
     }
     
     return 'Vælg Pro'
   }
 
   const isProButtonDisabled = (): boolean => {
-    // Disable if loading, creating checkout, already has Pro, or has scheduled downgrade to Pro
-    const hasScheduledDowngradeToPro = Boolean(userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date)
+    // Disable if loading, creating checkout, or already has Pro
     return loading || creatingProCheckout || 
-           (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') ||
-           (user !== null && hasScheduledDowngradeToPro)
+           (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro')
   }
 
   const handleTeamClick = async () => {
@@ -395,44 +376,9 @@ export default function HomePage() {
       return
     }
 
-    // Check if user wants to cancel a scheduled downgrade
-    if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team' && 
-        userProfile.scheduled_downgrade_to === 'pro' && userProfile.scheduled_downgrade_date) {
-      // Cancel scheduled downgrade by redirecting to Stripe Customer Portal
-      setCreatingTeamCheckout(true)
-      try {
-        const response = await fetch('/api/create-portal-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            customerId: userProfile.stripe_customer_id,
-            subscriptionId: userProfile.stripe_subscription_id,
-            directToRelease: true,
-            returnUrl: `${window.location.origin}/dashboard/settings`
-          }),
-        })
-        
-        const data = await response.json()
-        
-        if (data.url) {
-          window.location.href = data.url
-        } else {
-          throw new Error(data.error || 'Fejl ved åbning af kundeportal')
-        }
-      } catch (error) {
-        console.error('Error opening customer portal:', error)
-        alert('Der opstod en fejl ved åbning af kundeportalen. Prøv igen.')
-      } finally {
-        setCreatingTeamCheckout(false)
-      }
-      return
-    }
-
     // User is logged in - check subscription status
     if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team') {
-      alert('Du har allerede et Team abonnement!')
+      // Team users cannot perform actions from pricing page - they should use settings
       return
     }
 
@@ -487,11 +433,6 @@ export default function HomePage() {
   const getTeamButtonText = () => {
     if (loading) return 'Indlæser...'
     if (creatingTeamCheckout) {
-      // Check if we're cancelling a scheduled downgrade
-      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team' && 
-          userProfile?.scheduled_downgrade_to === 'pro') {
-        return 'Annullerer nedgradering...'
-      }
       // Team is always an upgrade (requires payment)
       if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
         return 'Opretter opgradering...'
@@ -500,12 +441,9 @@ export default function HomePage() {
     }
     if (!user) return 'Vælg Team'
     
-    // Check for scheduled downgrade from Team to Pro
+    // Team users see current plan, Pro users see upgrade option
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
-      if (userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date) {
-        return 'Annullér nedgradering'
-      }
-      return 'Du har allerede Team'
+      return 'Dit nuværende plan'
     }
     
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Opgradér til Team'
@@ -513,11 +451,10 @@ export default function HomePage() {
   }
 
   const isTeamButtonDisabled = (): boolean => {
-    // Enable Team button if there's a scheduled downgrade (so user can cancel it)
-    const hasScheduledDowngrade = Boolean(userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date)
+    // Disable Team button if user already has Team plan
     const hasTeamPlan = Boolean(user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team')
     
-    return loading || creatingTeamCheckout || (hasTeamPlan && !hasScheduledDowngrade)
+    return loading || creatingTeamCheckout || hasTeamPlan
   }
 
   const handleFreeTrialClick = async () => {
@@ -1135,13 +1072,19 @@ export default function HomePage() {
                   </ul>
                 </div>
                 <div className="mt-auto">
-                  <Button 
-                    className="w-full px-8 h-11 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold shadow-lg  transition-all duration-200" 
-                    onClick={handleProClick}
-                    disabled={isProButtonDisabled()}
-                  >
-                    {getProButtonText()}
-                  </Button>
+                  {getProButtonText() === null ? (
+                    <div className="w-full px-8 h-11 bg-gray-100 border border-gray-200 rounded-full font-medium text-gray-600 flex items-center justify-center">
+                      Inkluderet i dit Team abonnement
+                    </div>
+                  ) : (
+                    <Button 
+                      className="w-full px-8 h-11 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold shadow-lg  transition-all duration-200" 
+                      onClick={handleProClick}
+                      disabled={isProButtonDisabled()}
+                    >
+                      {getProButtonText()}
+                    </Button>
+                  )}
                 </div>
               </Card>
               <Card className="p-8 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
