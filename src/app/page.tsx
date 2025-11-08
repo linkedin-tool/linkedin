@@ -35,6 +35,8 @@ interface UserProfile {
   subscription_plan?: string | null
   subscription_status?: string | null
   stripe_customer_id?: string | null
+  scheduled_downgrade_to?: string | null
+  scheduled_downgrade_date?: string | null
 }
 
 export default function HomePage() {
@@ -63,7 +65,7 @@ export default function HomePage() {
         // Get user profile to check subscription status
         const { data: profileData } = await supabase
           .from('users')
-          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id')
+          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, scheduled_downgrade_to, scheduled_downgrade_date')
           .eq('id', user.id)
           .single()
         
@@ -355,18 +357,73 @@ export default function HomePage() {
     }
     if (!user) return 'Vælg Pro'
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Du har allerede Pro'
-    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Nedgradér til Pro'
+    
+    // Check for scheduled downgrade to Pro
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
+      if (userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date) {
+        // Format the date nicely
+        try {
+          const date = new Date(userProfile.scheduled_downgrade_date)
+          if (!isNaN(date.getTime())) {
+            const formattedDate = date.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })
+            return `Planlagt ${formattedDate}`
+          }
+        } catch (error) {
+          // Fallback if date parsing fails
+        }
+        return 'Nedgradering planlagt'
+      }
+      return 'Nedgradér til Pro'
+    }
+    
     return 'Vælg Pro'
   }
 
   const isProButtonDisabled = (): boolean => {
-    return loading || creatingProCheckout || (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro')
+    // Disable if loading, creating checkout, already has Pro, or has scheduled downgrade to Pro
+    const hasScheduledDowngradeToPro = Boolean(userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date)
+    return loading || creatingProCheckout || 
+           (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') ||
+           (user !== null && hasScheduledDowngradeToPro)
   }
 
   const handleTeamClick = async () => {
     if (!user || !userProfile) {
       // Not logged in - go to signup
       window.location.href = '/auth/signup?plan=team'
+      return
+    }
+
+    // Check if user wants to cancel a scheduled downgrade
+    if (userProfile.subscription_status === 'active' && userProfile.subscription_plan === 'team' && 
+        userProfile.scheduled_downgrade_to === 'pro' && userProfile.scheduled_downgrade_date) {
+      // Cancel scheduled downgrade by redirecting to Stripe Customer Portal
+      setCreatingTeamCheckout(true)
+      try {
+        const response = await fetch('/api/create-portal-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customerId: userProfile.stripe_customer_id,
+            returnUrl: `${window.location.origin}/dashboard/settings`
+          }),
+        })
+        
+        const data = await response.json()
+        
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error(data.error || 'Fejl ved åbning af kundeportal')
+        }
+      } catch (error) {
+        console.error('Error opening customer portal:', error)
+        alert('Der opstod en fejl ved åbning af kundeportalen. Prøv igen.')
+      } finally {
+        setCreatingTeamCheckout(false)
+      }
       return
     }
 
@@ -427,6 +484,11 @@ export default function HomePage() {
   const getTeamButtonText = () => {
     if (loading) return 'Indlæser...'
     if (creatingTeamCheckout) {
+      // Check if we're cancelling a scheduled downgrade
+      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team' && 
+          userProfile?.scheduled_downgrade_to === 'pro') {
+        return 'Annullerer nedgradering...'
+      }
       // Team is always an upgrade (requires payment)
       if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
         return 'Opretter opgradering...'
@@ -434,13 +496,25 @@ export default function HomePage() {
       return 'Opretter betaling...'
     }
     if (!user) return 'Vælg Team'
-    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Du har allerede Team'
+    
+    // Check for scheduled downgrade from Team to Pro
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
+      if (userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date) {
+        return 'Annullér nedgradering'
+      }
+      return 'Du har allerede Team'
+    }
+    
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Opgradér til Team'
     return 'Vælg Team'
   }
 
   const isTeamButtonDisabled = (): boolean => {
-    return loading || creatingTeamCheckout || (user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team')
+    // Enable Team button if there's a scheduled downgrade (so user can cancel it)
+    const hasScheduledDowngrade = Boolean(userProfile?.scheduled_downgrade_to === 'pro' && userProfile?.scheduled_downgrade_date)
+    const hasTeamPlan = Boolean(user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team')
+    
+    return loading || creatingTeamCheckout || (hasTeamPlan && !hasScheduledDowngrade)
   }
 
   const handleFreeTrialClick = async () => {
