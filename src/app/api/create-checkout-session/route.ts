@@ -3,7 +3,7 @@ import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, plan } = await request.json()
+    const { email, name, plan, quantity = 1 } = await request.json()
 
     if (!email || !name) {
       return NextResponse.json(
@@ -46,7 +46,11 @@ export async function POST(request: NextRequest) {
       // Only allow upgrade from Pro to Team
       if (currentPriceId === STRIPE_PRICE_ID && priceId === STRIPE_PRICE_ID_TEAM) {
         // For Pro to Team upgrade, create a one-time payment for the difference
-        // and then update the subscription
+        // Pro = 195 kr, Team = 199 kr per seat
+        const teamCost = quantity * 199 * 100 // Convert to øre
+        const proCost = 195 * 100 // Convert to øre
+        const difference = teamCost - proCost
+        
         const session = await stripe.checkout.sessions.create({
           customer: customer.id,
           payment_method_types: ['card'],
@@ -56,9 +60,9 @@ export async function POST(request: NextRequest) {
                 currency: 'dkk',
                 product_data: {
                   name: 'Upgrade til Team Plan',
-                  description: 'Opgradering fra Pro til Team - betaling af difference'
+                  description: `Opgradering fra Pro til Team (${quantity} medarbejdere) - betaling af difference`
                 },
-                unit_amount: 80400, // 804 kr difference (999 - 195)
+                unit_amount: difference,
               },
               quantity: 1,
             },
@@ -70,7 +74,8 @@ export async function POST(request: NextRequest) {
             customer_email: email,
             customer_name: name,
             subscription_id: currentSubscription.id,
-            upgrade_to: 'team'
+            upgrade_to: 'team',
+            quantity: quantity.toString()
           },
           allow_promotion_codes: true,
           billing_address_collection: 'required',
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
       line_items: [
         {
           price: priceId,
-          quantity: 1,
+          quantity: quantity,
         },
       ],
       mode: 'subscription',

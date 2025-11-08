@@ -30,12 +30,14 @@ export async function GET(request: NextRequest) {
         
         if (upgradeTo === 'team') {
           const { STRIPE_PRICE_ID_TEAM } = await import('@/lib/stripe')
+          const quantity = parseInt(session.metadata?.quantity || '1')
           
-          // Update subscription to Team plan
+          // Update subscription to Team plan with correct quantity
           await stripe.subscriptions.update(subscriptionId, {
             items: [{
               id: (await stripe.subscriptions.retrieve(subscriptionId)).items.data[0].id,
               price: STRIPE_PRICE_ID_TEAM,
+              quantity: quantity,
             }],
             proration_behavior: 'none', // No proration since we already paid the difference
           })

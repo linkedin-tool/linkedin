@@ -568,3 +568,93 @@ select[class*="appearance-none"]:active {
   outline-offset: 0 !important;
   box-shadow: none !important;
 }
+
+/* Custom Range Slider Styling - Override all layers */
+@layer components {
+  .slider {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 8px !important;
+    border-radius: 4px !important;
+    outline: none !important;
+    border: none !important;
+    background: linear-gradient(to right, #a855f7 0%, #a855f7 var(--slider-progress, 50%), #c4b5fd var(--slider-progress, 50%), #c4b5fd 100%) !important;
+    box-shadow: none !important;
+  }
+
+  .slider::-webkit-slider-track {
+    -webkit-appearance: none !important;
+    height: 8px !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .slider::-moz-range-track {
+    height: 8px !important;
+    border-radius: 4px !important;
+    background: #c4b5fd !important;
+    border: none !important;
+  }
+
+  .slider::-ms-track {
+    height: 8px !important;
+    border-radius: 4px !important;
+    background: #c4b5fd !important;
+    border: none !important;
+    color: transparent !important;
+  }
+
+  .slider::-ms-fill-lower {
+    background: #a855f7 !important;
+    border-radius: 4px !important;
+  }
+
+  .slider::-ms-fill-upper {
+    background: #c4b5fd !important;
+    border-radius: 4px !important;
+  }
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: #a855f7;
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #9333ea;
+  transform: scale(1.15);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.6);
+}
+
+.slider::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: #a855f7;
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #9333ea;
+  transform: scale(1.15);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.6);
+}
+
+.slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #c4b5fd;
+  border: none;
+}

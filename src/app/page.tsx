@@ -47,6 +47,7 @@ export default function HomePage() {
   const [creatingCheckout, setCreatingCheckout] = useState(false)
   const [creatingProCheckout, setCreatingProCheckout] = useState(false)
   const [creatingTeamCheckout, setCreatingTeamCheckout] = useState(false)
+  const [selectedSeats, setSelectedSeats] = useState(5)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [progressDemo, setProgressDemo] = useState(0)
   const [showDemo, setShowDemo] = useState(false)
@@ -397,7 +398,8 @@ export default function HomePage() {
           body: JSON.stringify({
             email: userProfile.email,
             name: userProfile.name,
-            plan: 'team'
+            plan: 'team',
+            quantity: selectedSeats
           }),
         })
       } else {
@@ -410,7 +412,8 @@ export default function HomePage() {
           body: JSON.stringify({
             email: userProfile.email,
             name: userProfile.name,
-            plan: 'team'
+            plan: 'team',
+            quantity: selectedSeats
           }),
         })
       }
@@ -1027,13 +1030,22 @@ export default function HomePage() {
                   </ul>
                 </div>
                 <div className="mt-auto">
-                  <Button 
-                    className="w-full px-8 h-11 bg-blue-800 hover:bg-blue-900 text-white rounded-full font-semibold  transition-all duration-200" 
-                    onClick={handleFreeTrialClick}
-                    disabled={loading || !!user}
-                  >
-                    {getFreeTrialButtonText()}
-                  </Button>
+                  {user ? (
+                    <Button 
+                      className="w-full px-8 h-11 bg-blue-800 text-white rounded-full font-medium cursor-default"
+                      disabled={true}
+                    >
+                      Allerede bruger
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="w-full px-8 h-11 bg-blue-800 hover:bg-blue-900 text-white rounded-full font-semibold  transition-all duration-200" 
+                      onClick={handleFreeTrialClick}
+                      disabled={loading}
+                    >
+                      {getFreeTrialButtonText()}
+                    </Button>
+                  )}
                 </div>
               </Card>
               <Card className="p-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-3xl transition-shadow duration-300 relative flex flex-col" style={{boxShadow: '0 -5px 15px -3px rgba(0, 0, 0, 0.08), 0 15px 35px -5px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)'}}>
@@ -1073,9 +1085,12 @@ export default function HomePage() {
                 </div>
                 <div className="mt-auto">
                   {getProButtonText() === null ? (
-                    <div className="w-full px-8 h-11 bg-gray-100 border border-gray-200 rounded-full font-medium text-gray-600 flex items-center justify-center">
-                      Inkluderet i dit Team abonnement
-                    </div>
+                    <Button 
+                      className="w-full px-8 h-11 bg-blue-800 text-white rounded-full font-medium cursor-default"
+                      disabled={true}
+                    >
+                      Inkluderet i Team plan
+                    </Button>
                   ) : (
                     <Button 
                       className="w-full px-8 h-11 bg-gradient-to-r from-blue-800 to-blue-700 hover:from-blue-900 hover:to-blue-800 text-white rounded-full font-semibold shadow-lg  transition-all duration-200" 
@@ -1092,8 +1107,36 @@ export default function HomePage() {
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Team</h3>
                   <p className="text-gray-600 mb-6">For virksomheder og teams</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">999 kr</span>
+                    <span className="text-4xl font-bold text-gray-900">{selectedSeats * 199} kr</span>
                     <span className="text-gray-600">/måned</span>
+                    <div className="text-sm text-gray-500 mt-1">
+                      199 kr per medarbejder
+                    </div>
+                  </div>
+                  
+                  {/* Seat Slider */}
+                  <div className="mb-8">
+                    <div className="flex items-center mb-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Antal medarbejdere:
+                      </label>
+                      <div className="ml-2 bg-purple-200 text-purple-900 px-3 py-1 rounded-full text-sm font-semibold">
+                        {selectedSeats}
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min="3"
+                        max="50"
+                        value={selectedSeats}
+                        onChange={(e) => setSelectedSeats(parseInt(e.target.value))}
+                        className="w-full appearance-none cursor-pointer slider"
+                        style={{
+                          '--slider-progress': `${((selectedSeats - 3) / (50 - 3)) * 100}%`
+                        } as React.CSSProperties & { '--slider-progress': string }}
+                      />
+                    </div>
                   </div>
                   <ul className="space-y-4 mb-8">
                     <li className="flex items-center">
@@ -1135,8 +1178,12 @@ export default function HomePage() {
             </div>
             <div className="text-center mt-12">
               <p className="text-gray-600">
-                <Shield className="w-5 h-5 inline mr-2" />
-                Kom i gang på under 2 minutter • Ingen kreditkort påkrævet • Opsig når som helst
+                {!user && (
+                  <>
+                    <Shield className="w-5 h-5 inline mr-2" />
+                    Kom i gang på under 2 minutter • Ingen kreditkort påkrævet • Opsig når som helst
+                  </>
+                )}
               </p>
             </div>
         </div>
@@ -1186,7 +1233,7 @@ export default function HomePage() {
         </section>
 
         {/* FAQ */}
-        <section className="py-20 bg-white">
+        <section className="py-16 pb-24 bg-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
@@ -1213,29 +1260,27 @@ export default function HomePage() {
                   answer: "Ja, du får 7 dages gratis adgang – uden kreditkort."
                 }
               ].map((faq, index) => (
-                <Card key={index} className="border border-gray-200 rounded-2xl overflow-hidden">
+                <Card key={index} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow duration-300">
                   <button
                     onClick={() => toggleFaq(index)}
-                    className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full px-6 py-1 text-left transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-900 pr-4">
+                      <h3 className="text-base font-semibold text-gray-900 pr-4">
                         {faq.question}
                       </h3>
-                      {openFaq === index ? (
-                        <ChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                      )}
+                      <div className={`transform transition-transform duration-300 ${openFaq === index ? 'rotate-180' : 'rotate-0'}`}>
+                        <ChevronDown className="w-6 h-6 text-gray-500 flex-shrink-0" />
+                      </div>
                     </div>
                   </button>
-                  {openFaq === index && (
-                    <div className="px-6 pb-6">
-                      <p className="text-gray-600 leading-relaxed">
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openFaq === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="px-6 pb-1">
+                      <p className="text-gray-600 leading-relaxed text-base">
                         {faq.answer}
                       </p>
                     </div>
-                  )}
+                  </div>
                 </Card>
               ))}
             </div>
