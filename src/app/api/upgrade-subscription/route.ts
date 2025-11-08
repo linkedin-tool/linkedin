@@ -68,16 +68,16 @@ export async function POST(request: NextRequest) {
         
         if (existingSchedule.status === 'active') {
           if (upgradeType === 'upgrade') {
-            // For upgrades: Cancel existing active schedule and proceed with immediate upgrade
-            console.log('Cancelling existing active schedule for immediate upgrade...')
-            await stripe.subscriptionSchedules.cancel(subscription.schedule)
+            // For upgrades: Release existing schedule (don't cancel subscription) and proceed with immediate upgrade
+            console.log('Releasing existing active schedule for immediate upgrade...')
+            await stripe.subscriptionSchedules.release(subscription.schedule)
             await new Promise(resolve => setTimeout(resolve, 1000))
             const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
             Object.assign(subscription, refreshedSubscription)
           } else {
-            // For downgrades: Replace existing active schedule with new one
-            console.log('Replacing existing active schedule with new downgrade schedule...')
-            await stripe.subscriptionSchedules.cancel(subscription.schedule)
+            // For downgrades: Release existing active schedule and create new one
+            console.log('Releasing existing active schedule to create new downgrade schedule...')
+            await stripe.subscriptionSchedules.release(subscription.schedule)
             await new Promise(resolve => setTimeout(resolve, 1000))
             const refreshedSubscription = await stripe.subscriptions.retrieve(subscription.id) as any
             Object.assign(subscription, refreshedSubscription)
@@ -131,12 +131,12 @@ export async function POST(request: NextRequest) {
       })
 
       // Update the schedule with phases
+      // Don't set start_date on first phase when created from existing subscription
       const updatedSchedule = await stripe.subscriptionSchedules.update(schedule.id, {
         end_behavior: 'release',
         phases: [
           {
             items: currentItems,
-            start_date: 'now',
             end_date: endDate,
             proration_behavior: 'none',
           },
