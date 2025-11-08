@@ -38,6 +38,7 @@ interface UserProfile {
   stripe_subscription_id?: string | null
   scheduled_downgrade_to?: string | null
   scheduled_downgrade_date?: string | null
+  team_members_count?: number | null
 }
 
 export default function HomePage() {
@@ -67,7 +68,7 @@ export default function HomePage() {
         // Get user profile to check subscription status
         const { data: profileData } = await supabase
           .from('users')
-          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id, scheduled_downgrade_to, scheduled_downgrade_date')
+          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id, scheduled_downgrade_to, scheduled_downgrade_date, team_members_count')
           .eq('id', user.id)
           .single()
         
@@ -436,28 +437,28 @@ export default function HomePage() {
   const getTeamButtonText = () => {
     if (loading) return 'Indlæser...'
     if (creatingTeamCheckout) {
-      // Team is always an upgrade (requires payment)
-      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
-        return 'Opretter opgradering...'
-      }
       return 'Opretter betaling...'
     }
     if (!user) return 'Vælg Team'
     
-    // Team users see current plan, Pro users see upgrade option
+    // Existing users should manage subscriptions in settings
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
       return 'Dit nuværende plan'
     }
     
-    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Opgradér til Team'
+    if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
+      return 'Administrér i indstillinger'
+    }
+    
     return 'Vælg Team'
   }
 
   const isTeamButtonDisabled = (): boolean => {
-    // Disable Team button if user already has Team plan
-    const hasTeamPlan = Boolean(user !== null && userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team')
+    // Disable Team button for all existing active users
+    const hasActiveSubscription = Boolean(user !== null && userProfile?.subscription_status === 'active' && 
+      (userProfile?.subscription_plan === 'team' || userProfile?.subscription_plan === 'pro'))
     
-    return loading || creatingTeamCheckout || hasTeamPlan
+    return loading || creatingTeamCheckout || hasActiveSubscription
   }
 
   const handleFreeTrialClick = async () => {

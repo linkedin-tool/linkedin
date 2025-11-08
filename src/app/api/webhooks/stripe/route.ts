@@ -64,12 +64,16 @@ export async function POST(request: NextRequest) {
 
           // Determine subscription plan based on price ID
           let subscriptionPlan = 'pro' // default
+          let teamMembersCount = 0 // default for Pro plans
           const subscriptionItem = subscription.items?.data?.[0]
           if (subscriptionItem?.price?.id) {
             if (subscriptionItem.price.id === STRIPE_PRICE_ID_TEAM) {
               subscriptionPlan = 'team'
+              // Get quantity for Team plans
+              teamMembersCount = subscriptionItem.quantity || 3 // default to 3 if quantity is missing
             } else if (subscriptionItem.price.id === STRIPE_PRICE_ID) {
               subscriptionPlan = 'pro'
+              teamMembersCount = 0 // Pro plans have 0 team members
             }
           }
 
@@ -92,6 +96,7 @@ export async function POST(request: NextRequest) {
             next_billing_date: nextBillingDate,
             cancel_at_period_end: subscription.cancel_at_period_end || subscription.cancel_at ? true : false,
             subscription_plan: subscriptionPlan,
+            team_members_count: teamMembersCount,
             // Clear scheduled downgrade ONLY when plan actually changes (downgrade completed)
             // All other schedule handling is done by subscription_schedule.updated webhook
             ...(planChanged && {
@@ -119,6 +124,8 @@ export async function POST(request: NextRequest) {
             id: subscription.id,
             customer: subscription.customer,
             status: subscription.status,
+            plan: subscriptionPlan,
+            team_members_count: teamMembersCount,
             cancel_at_period_end: subscription.cancel_at_period_end,
             cancel_at: subscription.cancel_at,
             canceled_at: subscription.canceled_at,

@@ -27,6 +27,7 @@ interface UserProfile {
   subscription_canceled_at?: string | null
   scheduled_downgrade_to?: string | null
   scheduled_downgrade_date?: string | null
+  team_members_count?: number | null
 }
 
 export default function SettingsPage() {
@@ -41,6 +42,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [creatingPortalSession, setCreatingPortalSession] = useState(false)
+  const [selectedTeamSeats, setSelectedTeamSeats] = useState(5)
+  const [currentTeamSeats, setCurrentTeamSeats] = useState(5)
 
   const supabase = createClient()
 
@@ -70,6 +73,11 @@ export default function SettingsPage() {
           name: profileData.name || '',
           email: profileData.email || '',
         })
+        
+        // Initialize team seats based on current subscription
+        const currentSeats = profileData.team_members_count || (profileData.subscription_plan === 'team' ? 5 : 0)
+        setCurrentTeamSeats(currentSeats)
+        setSelectedTeamSeats(currentSeats)
       }
 
       setLoading(false)
@@ -259,6 +267,176 @@ export default function SettingsPage() {
       setCreatingPortalSession(false)
       setTimeout(() => setMessage(''), 3000)
     }
+  }
+
+  const handleDowngradeToProClick = async () => {
+    if (!userProfile?.stripe_customer_id) {
+      setMessage('Fejl: Ingen Stripe kunde ID fundet')
+      return
+    }
+
+    setCreatingPortalSession(true)
+    try {
+      const response = await fetch('/api/upgrade-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: userProfile.stripe_customer_id,
+          targetPlan: 'pro',
+          upgradeType: 'downgrade'
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        // Redirect to dashboard with success message
+        window.location.href = data.url || '/dashboard?tab=subscription'
+      } else {
+        setMessage('Fejl ved nedgradering: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Downgrade error:', error)
+      setMessage('Der skete en fejl ved nedgradering til Pro')
+    } finally {
+      setCreatingPortalSession(false)
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
+
+  const handleTeamPlanClick = async () => {
+    if (!userProfile) return
+
+    const isUpgrade = selectedTeamSeats > currentTeamSeats
+    const isDowngrade = selectedTeamSeats < currentTeamSeats
+    
+    if (userProfile.subscription_plan === 'pro') {
+      // Upgrade from Pro to Team
+      setCreatingPortalSession(true)
+      try {
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userProfile.email,
+            name: userProfile.name,
+            plan: 'team',
+            quantity: selectedTeamSeats
+          }),
+        })
+
+        const data = await response.json()
+        
+        if (response.ok) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url || `https://checkout.stripe.com/pay/${data.sessionId}`
+        } else {
+          setMessage('Fejl ved oprettelse af betaling: ' + data.error)
+        }
+      } catch (error) {
+        console.error('Upgrade error:', error)
+        setMessage('Der skete en fejl ved opgradering til Team')
+      } finally {
+        setCreatingPortalSession(false)
+        setTimeout(() => setMessage(''), 3000)
+      }
+    } else if (userProfile.subscription_plan === 'team') {
+      // Modify existing Team subscription
+      if (selectedTeamSeats === currentTeamSeats) {
+        setMessage('Vælg et andet antal medarbejdere for at ændre dit abonnement')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
+
+      setCreatingPortalSession(true)
+      try {
+        if (isUpgrade) {
+          // Immediate upgrade with proration
+          const response = await fetch('/api/upgrade-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customerId: userProfile.stripe_customer_id,
+              targetPlan: 'team',
+              upgradeType: 'upgrade',
+              quantity: selectedTeamSeats
+            }),
+          })
+
+          const data = await response.json()
+          
+          if (response.ok) {
+            window.location.href = data.url || '/dashboard?tab=subscription'
+          } else {
+            setMessage('Fejl ved opgradering: ' + data.error)
+          }
+        } else {
+          // Scheduled downgrade at period end
+          const response = await fetch('/api/upgrade-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customerId: userProfile.stripe_customer_id,
+              targetPlan: 'team',
+              upgradeType: 'downgrade',
+              quantity: selectedTeamSeats
+            }),
+          })
+
+          const data = await response.json()
+          
+          if (response.ok) {
+            window.location.href = data.url || '/dashboard?tab=subscription'
+          } else {
+            setMessage('Fejl ved nedgradering: ' + data.error)
+          }
+        }
+      } catch (error) {
+        console.error('Team plan modification error:', error)
+        setMessage('Der skete en fejl ved ændring af Team plan')
+      } finally {
+        setCreatingPortalSession(false)
+        setTimeout(() => setMessage(''), 3000)
+      }
+    }
+  }
+
+  const getTeamButtonText = () => {
+    if (userProfile?.subscription_plan === 'pro') {
+      return 'Opgradér til Team'
+    } else if (userProfile?.subscription_plan === 'team') {
+      if (selectedTeamSeats > currentTeamSeats) {
+        return 'Opgradér Plan'
+      } else if (selectedTeamSeats < currentTeamSeats) {
+        return 'Nedgradér Plan'
+      } else {
+        return 'Nuværende Plan'
+      }
+    }
+    return 'Vælg Team Plan'
+  }
+
+  const getTeamButtonStyle = () => {
+    if (userProfile?.subscription_plan === 'pro') {
+      return 'bg-purple-600 hover:bg-purple-700'
+    } else if (userProfile?.subscription_plan === 'team') {
+      if (selectedTeamSeats > currentTeamSeats) {
+        return 'bg-green-600 hover:bg-green-700'
+      } else if (selectedTeamSeats < currentTeamSeats) {
+        return 'bg-orange-600 hover:bg-orange-700'
+      } else {
+        return 'bg-gray-400 cursor-not-allowed'
+      }
+    }
+    return 'bg-purple-600 hover:bg-purple-700'
   }
 
   if (loading) {
@@ -456,6 +634,19 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                {/* Team Members Count - Only show for Team plans */}
+                {userProfile?.subscription_plan === 'team' && userProfile?.team_members_count && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-base font-medium text-gray-700">
+                      <Building2 className="h-4 w-4" />
+                      Team medlemmer
+                    </div>
+                    <div className="text-base text-gray-900">
+                      {userProfile.team_members_count} medarbejdere
+                    </div>
+                  </div>
+                )}
+
                 {/* Billing Information */}
                 {userProfile?.subscription_status === 'active' && !userProfile?.cancel_at_period_end && (
                   <div className="space-y-1">
@@ -618,6 +809,110 @@ export default function SettingsPage() {
                         <Crown className="h-4 w-4" />
                         {creatingPortalSession ? 'Opretter...' : 'Opgradér til Pro'}
                       </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Plan Management Section - Only for active Pro or Team users */}
+                {(userProfile?.subscription_status === 'active' && 
+                  (userProfile?.subscription_plan === 'pro' || userProfile?.subscription_plan === 'team')) && (
+                  <div className="pt-8 border-t border-gray-200">
+                    <h4 className="text-lg font-medium text-gray-900 mb-6">Administrer Abonnement</h4>
+                    <p className="text-base text-gray-600 mb-8">
+                      Skift mellem Pro og Team planer eller justér antal medarbejdere.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Pro Plan Card */}
+                      <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Crown className="h-6 w-6 text-blue-600" />
+                          <h5 className="text-xl font-bold text-gray-900">Pro Plan</h5>
+                          {userProfile?.subscription_plan === 'pro' && (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">Nuværende</Badge>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          <span className="text-3xl font-bold text-gray-900">299 kr</span>
+                          <span className="text-gray-600">/måned</span>
+                        </div>
+                        <ul className="space-y-2 mb-6 text-sm text-gray-700">
+                          <li>• Fuld adgang til platformen</li>
+                          <li>• Avanceret dashboard</li>
+                          <li>• Prioriteret support</li>
+                        </ul>
+                        {userProfile?.subscription_plan === 'team' && (
+                          <Button 
+                            onClick={handleDowngradeToProClick}
+                            disabled={creatingPortalSession}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                          >
+                            {creatingPortalSession ? 'Behandler...' : 'Nedgradér til Pro'}
+                          </Button>
+                        )}
+                        {userProfile?.subscription_plan === 'pro' && (
+                          <div className="text-center text-sm text-gray-500 py-2">
+                            Din nuværende plan
+                          </div>
+                        )}
+                      </Card>
+
+                      {/* Team Plan Card */}
+                      <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Building2 className="h-6 w-6 text-purple-600" />
+                          <h5 className="text-xl font-bold text-gray-900">Team Plan</h5>
+                          {userProfile?.subscription_plan === 'team' && (
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-200">Nuværende</Badge>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          <span className="text-3xl font-bold text-gray-900">{selectedTeamSeats * 199} kr</span>
+                          <span className="text-gray-600">/måned</span>
+                          <div className="text-sm text-gray-500 mt-1">
+                            199 kr per medarbejder
+                          </div>
+                        </div>
+                        
+                        {/* Team Seat Slider */}
+                        <div className="mb-6">
+                          <div className="flex items-center mb-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Antal medarbejdere:
+                            </label>
+                            <div className="ml-2 bg-purple-200 text-purple-900 px-3 py-1 rounded-full text-sm font-semibold">
+                              {selectedTeamSeats}
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="range"
+                              min="3"
+                              max="50"
+                              value={selectedTeamSeats}
+                              onChange={(e) => setSelectedTeamSeats(parseInt(e.target.value))}
+                              className="w-full appearance-none cursor-pointer slider"
+                              style={{
+                                '--slider-progress': `${((selectedTeamSeats - 3) / (50 - 3)) * 100}%`
+                              } as React.CSSProperties & { '--slider-progress': string }}
+                            />
+                          </div>
+                        </div>
+
+                        <ul className="space-y-2 mb-6 text-sm text-gray-700">
+                          <li>• Alle Pro funktioner</li>
+                          <li>• Team medlemmer</li>
+                          <li>• Centraliseret content styring</li>
+                        </ul>
+                        
+                        <Button 
+                          onClick={handleTeamPlanClick}
+                          disabled={creatingPortalSession}
+                          className={`w-full ${getTeamButtonStyle()}`}
+                        >
+                          {creatingPortalSession ? 'Behandler...' : getTeamButtonText()}
+                        </Button>
+                      </Card>
                     </div>
                   </div>
                 )}

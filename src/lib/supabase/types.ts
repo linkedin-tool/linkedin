@@ -435,6 +435,7 @@ export type Database = {
           subscription_created_at: string | null
           subscription_plan: string | null
           subscription_status: string | null
+          team_members_count: number | null
           trial_end: string | null
         }
         Insert: {
@@ -455,6 +456,7 @@ export type Database = {
           subscription_created_at?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
+          team_members_count?: number | null
           trial_end?: string | null
         }
         Update: {
@@ -475,6 +477,7 @@ export type Database = {
           subscription_created_at?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
+          team_members_count?: number | null
           trial_end?: string | null
         }
         Relationships: []

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, targetPlan, upgradeType } = await request.json()
+    const { customerId, targetPlan, upgradeType, quantity } = await request.json()
 
     if (!customerId || !targetPlan || !upgradeType) {
       return NextResponse.json(
@@ -12,6 +12,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Default quantity to 1 for Pro, 3 for Team if not specified
+    const finalQuantity = quantity || (targetPlan === 'team' ? 3 : 1)
 
     // Determine price ID based on target plan
     let newPriceId: string
@@ -98,6 +101,7 @@ export async function POST(request: NextRequest) {
         items: [{
           id: subscriptionItem.id,
           price: newPriceId,
+          quantity: finalQuantity,
         }],
         proration_behavior: 'create_prorations',
         billing_cycle_anchor: 'unchanged'
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
             proration_behavior: 'none',
           },
           {
-            items: [{ price: newPriceId, quantity: 1 }],
+            items: [{ price: newPriceId, quantity: finalQuantity }],
             proration_behavior: 'none',
           },
         ],

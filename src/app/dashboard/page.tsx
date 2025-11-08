@@ -31,6 +31,7 @@ interface UserProfile {
   stripe_subscription_id?: string | null
   scheduled_downgrade_to?: string | null
   scheduled_downgrade_date?: string | null
+  team_members_count?: number | null
 }
 
 interface LinkedInPost {
