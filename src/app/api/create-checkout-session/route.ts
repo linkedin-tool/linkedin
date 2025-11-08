@@ -4,6 +4,9 @@ import { stripe, STRIPE_PRICE_ID, STRIPE_PRICE_ID_TEAM } from '@/lib/stripe'
 export async function POST(request: NextRequest) {
   try {
     const { email, name, plan, quantity = 1 } = await request.json()
+    
+    // Ensure minimum quantity for Team plan
+    const finalQuantity = plan === 'team' ? Math.max(quantity, 3) : quantity
 
     if (!email || !name) {
       return NextResponse.json(
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
       if (currentPriceId === STRIPE_PRICE_ID && priceId === STRIPE_PRICE_ID_TEAM) {
         // For Pro to Team upgrade, create a one-time payment for the difference
         // Pro = 195 kr, Team = 199 kr per seat
-        const teamCost = quantity * 199 * 100 // Convert to øre
+        const teamCost = finalQuantity * 199 * 100 // Convert to øre
         const proCost = 195 * 100 // Convert to øre
         const difference = teamCost - proCost
         
@@ -60,7 +63,7 @@ export async function POST(request: NextRequest) {
                 currency: 'dkk',
                 product_data: {
                   name: 'Upgrade til Team Plan',
-                  description: `Opgradering fra Pro til Team (${quantity} medarbejdere) - betaling af difference`
+                  description: `Opgradering fra Pro til Team (${finalQuantity} medarbejdere) - betaling af difference`
                 },
                 unit_amount: difference,
               },
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
             customer_name: name,
             subscription_id: currentSubscription.id,
             upgrade_to: 'team',
-            quantity: quantity.toString()
+            quantity: finalQuantity.toString()
           },
           allow_promotion_codes: true,
           billing_address_collection: 'required',
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
       line_items: [
         {
           price: priceId,
-          quantity: quantity,
+          quantity: finalQuantity,
           ...(plan === 'team' && {
             adjustable_quantity: {
               enabled: true,

@@ -22,6 +22,7 @@ function SignupForm() {
   
   // Check if user is signing up for Pro plan, Team plan, or free trial
   const selectedPlan = searchParams.get('plan')
+  const quantity = parseInt(searchParams.get('quantity') || '1')
   const isPro = selectedPlan === 'pro'
   const isTeam = selectedPlan === 'team'
   const isFreeTrial = selectedPlan === 'free_trial'
@@ -37,6 +38,7 @@ function SignupForm() {
           email,
           name,
           plan: selectedPlan,
+          quantity: quantity,
         }),
       })
 
@@ -159,7 +161,7 @@ function SignupForm() {
                 <strong>Team Plan valgt</strong> - Du vil blive ført til betaling efter registrering
               </p>
               <p className="text-center text-xs text-purple-600 mt-1">
-                999 kr/måned • Alle Pro funktioner + Team medlemmer
+                {quantity * 199} kr/måned • {quantity} medarbejdere • Alle Pro funktioner + Team medlemmer
               </p>
             </div>
           )}

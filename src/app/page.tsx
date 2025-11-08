@@ -373,7 +373,7 @@ export default function HomePage() {
   const handleTeamClick = async () => {
     if (!user || !userProfile) {
       // Not logged in - go to signup
-      window.location.href = '/auth/signup?plan=team'
+      window.location.href = `/auth/signup?plan=team&quantity=${selectedSeats}`
       return
     }
 
