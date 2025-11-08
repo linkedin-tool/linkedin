@@ -99,11 +99,9 @@ export async function POST(request: NextRequest) {
             next_billing_date: nextBillingDate,
             cancel_at_period_end: subscription.cancel_at_period_end || subscription.cancel_at ? true : false,
             subscription_plan: subscriptionPlan,
-            // Only clear scheduled downgrade info when plan actually changes (downgrade completed)
-            ...(shouldClearScheduledDowngrade && {
-              scheduled_downgrade_to: null,
-              scheduled_downgrade_date: null,
-            }),
+            // Handle scheduled downgrade info - clear if needed, preserve if not
+            scheduled_downgrade_to: shouldClearScheduledDowngrade ? null : currentUser?.scheduled_downgrade_to,
+            scheduled_downgrade_date: shouldClearScheduledDowngrade ? null : currentUser?.scheduled_downgrade_date,
             // Only set subscription_created_at for new subscriptions
             ...(isNewSubscription && subscription.created && {
               subscription_created_at: new Date(subscription.created * 1000).toISOString()
