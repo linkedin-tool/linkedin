@@ -409,6 +409,7 @@ export default function HomePage() {
           body: JSON.stringify({
             customerId: userProfile.stripe_customer_id,
             subscriptionId: userProfile.stripe_subscription_id,
+            directToRelease: true,
             returnUrl: `${window.location.origin}/dashboard/settings`
           }),
         })
