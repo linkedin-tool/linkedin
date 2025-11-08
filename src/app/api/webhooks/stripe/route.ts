@@ -302,6 +302,27 @@ export async function POST(request: NextRequest) {
             }
           }
           
+          // Handle admin cancellation (phases reduced from 2+ to 1)
+          else if (currentStatus === 'active' && previousPhases && 
+                   previousPhases.length >= 2 && currentPhases.length === 1) {
+            console.log('Schedule phases reduced from', previousPhases.length, 'to', currentPhases.length, '- admin cancelled downgrade')
+            
+            // Clear scheduled downgrade info
+            const { error } = await supabase
+              .from('users')
+              .update({
+                scheduled_downgrade_to: null,
+                scheduled_downgrade_date: null
+              })
+              .eq('stripe_customer_id', customerId)
+            
+            if (error) {
+              console.error('Error clearing scheduled downgrade from admin cancellation:', error)
+            } else {
+              console.log('Successfully cleared scheduled downgrade from admin cancellation')
+            }
+          }
+          
         } catch (scheduleError) {
           console.error('Error in subscription schedule webhook handler:', scheduleError)
           throw scheduleError
