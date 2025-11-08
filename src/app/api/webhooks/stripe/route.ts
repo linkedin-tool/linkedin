@@ -80,9 +80,16 @@ export async function POST(request: NextRequest) {
             .eq('stripe_customer_id', subscription.customer)
             .single()
 
-          // Only clear scheduled downgrade if the plan actually changed (downgrade completed)
+          // Check if scheduled downgrade should be cleared
           const planChanged = currentUser && currentUser.subscription_plan !== subscriptionPlan
-          const shouldClearScheduledDowngrade = planChanged && currentUser.scheduled_downgrade_to
+          const planChangeDowngrade = planChanged && currentUser.scheduled_downgrade_to
+          
+          // Check if schedule was cancelled (schedule went from existing to null)
+          const previousSchedule = event.data.previous_attributes?.schedule
+          const currentSchedule = subscription.schedule
+          const scheduleCancelled = previousSchedule && !currentSchedule && currentUser.scheduled_downgrade_to
+          
+          const shouldClearScheduledDowngrade = planChangeDowngrade || scheduleCancelled
 
           const updateData = {
             stripe_customer_id: subscription.customer,
@@ -108,9 +115,13 @@ export async function POST(request: NextRequest) {
           }
 
           if (shouldClearScheduledDowngrade) {
-            console.log('Plan changed from', currentUser.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade')
+            if (planChangeDowngrade) {
+              console.log('Plan changed from', currentUser.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade')
+            } else if (scheduleCancelled) {
+              console.log('Schedule cancelled (', previousSchedule, '→ null) - clearing scheduled downgrade from database')
+            }
           } else {
-            console.log('Plan unchanged or no scheduled downgrade - preserving scheduled downgrade info')
+            console.log('Plan unchanged and no schedule cancellation - preserving scheduled downgrade info')
           }
           
           console.log('Webhook update data:', updateData)
