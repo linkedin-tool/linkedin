@@ -346,7 +346,13 @@ export default function HomePage() {
 
   const getProButtonText = () => {
     if (loading) return 'Indlæser...'
-    if (creatingProCheckout) return 'Opretter betaling...'
+    if (creatingProCheckout) {
+      // Different loading text based on user's current plan
+      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
+        return 'Planlægger nedgradering...'
+      }
+      return 'Opretter betaling...'
+    }
     if (!user) return 'Vælg Pro'
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Du har allerede Pro'
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Nedgradér til Pro'
@@ -420,7 +426,13 @@ export default function HomePage() {
 
   const getTeamButtonText = () => {
     if (loading) return 'Indlæser...'
-    if (creatingTeamCheckout) return 'Opretter betaling...'
+    if (creatingTeamCheckout) {
+      // Team is always an upgrade (requires payment)
+      if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
+        return 'Opretter opgradering...'
+      }
+      return 'Opretter betaling...'
+    }
     if (!user) return 'Vælg Team'
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') return 'Du har allerede Team'
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') return 'Opgradér til Team'
