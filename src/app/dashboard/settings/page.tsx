@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [creatingPortalSession, setCreatingPortalSession] = useState(false)
+  const [modifyingTeamPlan, setModifyingTeamPlan] = useState(false)
   const [selectedTeamSeats, setSelectedTeamSeats] = useState(5)
   const [currentTeamSeats, setCurrentTeamSeats] = useState(5)
 
@@ -313,7 +314,7 @@ export default function SettingsPage() {
     
     if (userProfile.subscription_plan === 'pro') {
       // Upgrade from Pro to Team
-      setCreatingPortalSession(true)
+      setModifyingTeamPlan(true)
       try {
         const response = await fetch('/api/create-checkout-session', {
           method: 'POST',
@@ -340,7 +341,7 @@ export default function SettingsPage() {
         console.error('Upgrade error:', error)
         setMessage('Der skete en fejl ved opgradering til Team')
       } finally {
-        setCreatingPortalSession(false)
+        setModifyingTeamPlan(false)
         setTimeout(() => setMessage(''), 3000)
       }
     } else if (userProfile.subscription_plan === 'team') {
@@ -351,7 +352,7 @@ export default function SettingsPage() {
         return
       }
 
-      setCreatingPortalSession(true)
+      setModifyingTeamPlan(true)
       try {
         if (isUpgrade) {
           // Immediate upgrade with proration
@@ -402,7 +403,7 @@ export default function SettingsPage() {
         console.error('Team plan modification error:', error)
         setMessage('Der skete en fejl ved ændring af Team plan')
       } finally {
-        setCreatingPortalSession(false)
+        setModifyingTeamPlan(false)
         setTimeout(() => setMessage(''), 3000)
       }
     }
@@ -424,6 +425,10 @@ export default function SettingsPage() {
   }
 
   const getTeamButtonStyle = () => {
+    if (modifyingTeamPlan) {
+      return 'bg-gray-400 cursor-not-allowed'
+    }
+    
     if (userProfile?.subscription_plan === 'pro') {
       return 'bg-purple-600 hover:bg-purple-700'
     } else if (userProfile?.subscription_plan === 'team') {
@@ -718,10 +723,20 @@ export default function SettingsPage() {
                           Nedgradering planlagt 📅
                         </div>
                         <p className="text-base text-blue-700">
-                          Dit abonnement skifter fra <strong>{currentPlan}</strong> til <strong>{targetPlanText}</strong> den {date}
+                          {(() => {
+                            const isSamePlanType = currentPlan === targetPlanText
+                            
+                            if (isSamePlanType) {
+                              // Same plan type (e.g. Team 9 → Team 7)
+                              return `Dit abonnement justeres til det nye antal medarbejdere den ${date}`
+                            } else {
+                              // Different plan type (e.g. Team → Pro)
+                              return `Dit abonnement skifter fra ${currentPlan} til ${targetPlanText} den ${date}`
+                            }
+                          })()}
                         </p>
                         <p className="text-sm text-blue-600 mt-2">
-                          Du beholder alle {currentPlan} funktioner indtil nedgraderingen træder i kraft.
+                          Du beholder alle {currentPlan} funktioner indtil ændringen træder i kraft.
                         </p>
                       </div>
                     )
@@ -906,10 +921,10 @@ export default function SettingsPage() {
                         
                         <Button 
                           onClick={handleTeamPlanClick}
-                          disabled={creatingPortalSession}
+                          disabled={modifyingTeamPlan}
                           className={`w-full ${getTeamButtonStyle()}`}
                         >
-                          {creatingPortalSession ? 'Behandler...' : getTeamButtonText()}
+                          {modifyingTeamPlan ? 'Behandler...' : getTeamButtonText()}
                         </Button>
                       </Card>
                     </div>

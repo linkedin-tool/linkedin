@@ -299,7 +299,18 @@ function DashboardContent() {
                           Nedgradering planlagt til {targetPlanText} 📅
                         </h3>
                         <p className="text-gray-700 mt-1">
-                          Du beholder dine {userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'} rettigheder til {date}. Derefter skifter du til {targetPlanText} plan.
+                          {(() => {
+                            const currentPlan = userProfile?.subscription_plan === 'team' ? 'Team' : 'Pro'
+                            const isSamePlanType = currentPlan === targetPlanText
+                            
+                            if (isSamePlanType) {
+                              // Same plan type (e.g. Team 9 → Team 7)
+                              return `Du beholder dine ${currentPlan} rettigheder til ${date}. Derefter justeres dit abonnement til det nye antal medarbejdere.`
+                            } else {
+                              // Different plan type (e.g. Team → Pro)
+                              return `Du beholder dine ${currentPlan} rettigheder til ${date}. Derefter skifter du til ${targetPlanText} plan.`
+                            }
+                          })()}
                           {isFromUrl && (
                             <span className="text-xs text-blue-600 block mt-1">
                               ⏳ Bekræftelse behandles...
