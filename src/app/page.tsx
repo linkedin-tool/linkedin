@@ -35,6 +35,7 @@ interface UserProfile {
   subscription_plan?: string | null
   subscription_status?: string | null
   stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
   scheduled_downgrade_to?: string | null
   scheduled_downgrade_date?: string | null
 }
@@ -65,7 +66,7 @@ export default function HomePage() {
         // Get user profile to check subscription status
         const { data: profileData } = await supabase
           .from('users')
-          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, scheduled_downgrade_to, scheduled_downgrade_date')
+          .select('id, name, email, subscription_plan, subscription_status, stripe_customer_id, stripe_subscription_id, scheduled_downgrade_to, scheduled_downgrade_date')
           .eq('id', user.id)
           .single()
         
@@ -407,6 +408,7 @@ export default function HomePage() {
           },
           body: JSON.stringify({
             customerId: userProfile.stripe_customer_id,
+            subscriptionId: userProfile.stripe_subscription_id,
             returnUrl: `${window.location.origin}/dashboard/settings`
           }),
         })

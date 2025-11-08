@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerId } = await request.json()
+    const { customerId, returnUrl, subscriptionId } = await request.json()
 
     if (!customerId) {
       return NextResponse.json(
@@ -12,11 +12,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Stripe customer portal session
-    const session = await stripe.billingPortal.sessions.create({
+    const portalConfig: any = {
       customer: customerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings?tab=subscription`,
-    })
+      return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings?tab=subscription`,
+    }
+
+    // If subscriptionId is provided, configure flow to go directly to subscription management
+    if (subscriptionId) {
+      portalConfig.flow_data = {
+        type: 'subscription_update',
+        subscription_update: {
+          subscription: subscriptionId
+        }
+      }
+    }
+
+    // Create Stripe customer portal session
+    const session = await stripe.billingPortal.sessions.create(portalConfig)
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
