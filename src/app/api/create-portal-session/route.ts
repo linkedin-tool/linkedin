@@ -23,13 +23,18 @@ export async function POST(request: NextRequest) {
 
         // Extract the session ID from the portal URL and construct the direct release URL
         const portalUrl = session.url
-        const sessionMatch = portalUrl.match(/\/p\/session\/([^\/]+)\//)
+        console.log('Original portal URL:', portalUrl)
+        
+        // Match session ID - it can end with either / or end of string
+        const sessionMatch = portalUrl.match(/\/p\/session\/([^\/\?]+)/)
         
         if (sessionMatch) {
           const sessionId = sessionMatch[1]
           const releaseUrl = `https://billing.stripe.com/p/session/${sessionId}/subscriptions/${subscriptionId}/release`
+          console.log('Constructed release URL:', releaseUrl)
           return NextResponse.json({ url: releaseUrl })
         } else {
+          console.log('Could not extract session ID from URL:', portalUrl)
           // Fallback to regular portal if we can't extract session ID
           return NextResponse.json({ url: portalUrl })
         }
