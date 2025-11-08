@@ -130,13 +130,17 @@ export async function POST(request: NextRequest) {
         from_subscription: subscription.id,
       })
 
-      // Update the schedule with phases
-      // Don't set start_date on first phase when created from existing subscription
+      // Get the created schedule to see its current phase
+      const createdSchedule = await stripe.subscriptionSchedules.retrieve(schedule.id)
+      const currentPhase = createdSchedule.phases[0] // Should be the phase created from subscription
+      
+      // Update the schedule with phases, preserving the original start_date
       const updatedSchedule = await stripe.subscriptionSchedules.update(schedule.id, {
         end_behavior: 'release',
         phases: [
           {
             items: currentItems,
+            start_date: currentPhase.start_date, // Use the original start_date from created schedule
             end_date: endDate,
             proration_behavior: 'none',
           },
