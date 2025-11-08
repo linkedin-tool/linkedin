@@ -77,16 +77,17 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Get current user data to check if plan actually changed
+          // Get current user data to check if plan or team members count actually changed
           const { data: currentUser } = await supabase
             .from('users')
-            .select('subscription_plan')
+            .select('subscription_plan, team_members_count')
             .eq('stripe_customer_id', subscription.customer)
             .single()
 
-          // Only clear scheduled downgrade if the plan actually changed (downgrade completed)
-          // All other schedule handling is done by subscription_schedule.updated webhook
+          // Check if plan changed (e.g. Pro to Team) OR team members count changed (e.g. Team 9 to Team 7)
           const planChanged = currentUser && currentUser.subscription_plan !== subscriptionPlan
+          const teamMembersChanged = currentUser && currentUser.team_members_count !== teamMembersCount
+          const subscriptionChanged = planChanged || teamMembersChanged
 
           const updateData = {
             stripe_customer_id: subscription.customer,
@@ -97,9 +98,9 @@ export async function POST(request: NextRequest) {
             cancel_at_period_end: subscription.cancel_at_period_end || subscription.cancel_at ? true : false,
             subscription_plan: subscriptionPlan,
             team_members_count: teamMembersCount,
-            // Clear scheduled downgrade ONLY when plan actually changes (downgrade completed)
+            // Clear scheduled downgrade when plan OR team members count changes (downgrade completed)
             // All other schedule handling is done by subscription_schedule.updated webhook
-            ...(planChanged && {
+            ...(subscriptionChanged && {
               scheduled_downgrade_to: null,
               scheduled_downgrade_date: null,
             }),
@@ -113,10 +114,15 @@ export async function POST(request: NextRequest) {
             })
           }
 
-          if (planChanged) {
-            console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade (downgrade completed)')
+          if (subscriptionChanged) {
+            if (planChanged) {
+              console.log('Plan changed from', currentUser?.subscription_plan, 'to', subscriptionPlan, '- clearing scheduled downgrade (downgrade completed)')
+            }
+            if (teamMembersChanged) {
+              console.log('Team members changed from', currentUser?.team_members_count, 'to', teamMembersCount, '- clearing scheduled downgrade (downgrade completed)')
+            }
           } else {
-            console.log('Plan unchanged - not touching scheduled downgrade fields (handled by subscription_schedule.updated)')
+            console.log('No subscription changes - not touching scheduled downgrade fields (handled by subscription_schedule.updated)')
           }
           
           console.log('Webhook update data:', updateData)
