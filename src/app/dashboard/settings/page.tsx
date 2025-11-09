@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ExternalLink, Crown, Calendar, CreditCard, Building2 } from 'lucide-react'
+import { ExternalLink, Crown, Calendar, CreditCard, Building2, Check } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('')
   const [creatingPortalSession, setCreatingPortalSession] = useState(false)
   const [modifyingTeamPlan, setModifyingTeamPlan] = useState(false)
+  const [downgradingToPro, setDowngradingToPro] = useState(false)
   const [selectedTeamSeats, setSelectedTeamSeats] = useState(5)
   const [currentTeamSeats, setCurrentTeamSeats] = useState(5)
 
@@ -78,7 +79,13 @@ export default function SettingsPage() {
         // Initialize team seats based on current subscription
         const currentSeats = profileData.team_members_count || (profileData.subscription_plan === 'team' ? 5 : 0)
         setCurrentTeamSeats(currentSeats)
-        setSelectedTeamSeats(currentSeats)
+        
+        // Set default selected seats - 5 for Pro users, current for Team users
+        if (profileData.subscription_plan === 'pro') {
+          setSelectedTeamSeats(5) // Default to 5 for Pro users
+        } else {
+          setSelectedTeamSeats(currentSeats)
+        }
       }
 
       setLoading(false)
@@ -276,7 +283,7 @@ export default function SettingsPage() {
       return
     }
 
-    setCreatingPortalSession(true)
+    setDowngradingToPro(true)
     try {
       const response = await fetch('/api/upgrade-subscription', {
         method: 'POST',
@@ -286,15 +293,16 @@ export default function SettingsPage() {
         body: JSON.stringify({
           customerId: userProfile.stripe_customer_id,
           targetPlan: 'pro',
-          upgradeType: 'downgrade'
+          upgradeType: 'downgrade',
+          source: 'settings'
         }),
       })
 
       const data = await response.json()
       
       if (response.ok) {
-        // Redirect to dashboard with success message
-        window.location.href = data.url || '/dashboard?tab=subscription'
+        // Stay on settings page and reload to see updated status
+        window.location.reload()
       } else {
         setMessage('Fejl ved nedgradering: ' + data.error)
       }
@@ -302,7 +310,7 @@ export default function SettingsPage() {
       console.error('Downgrade error:', error)
       setMessage('Der skete en fejl ved nedgradering til Pro')
     } finally {
-      setCreatingPortalSession(false)
+      setDowngradingToPro(false)
       setTimeout(() => setMessage(''), 3000)
     }
   }
@@ -365,7 +373,8 @@ export default function SettingsPage() {
               customerId: userProfile.stripe_customer_id,
               targetPlan: 'team',
               upgradeType: 'upgrade',
-              quantity: selectedTeamSeats
+              quantity: selectedTeamSeats,
+              source: 'settings'
             }),
           })
 
@@ -387,7 +396,8 @@ export default function SettingsPage() {
               customerId: userProfile.stripe_customer_id,
               targetPlan: 'team',
               upgradeType: 'downgrade',
-              quantity: selectedTeamSeats
+              quantity: selectedTeamSeats,
+              source: 'settings'
             }),
           })
 
@@ -425,19 +435,15 @@ export default function SettingsPage() {
   }
 
   const getTeamButtonStyle = () => {
-    if (modifyingTeamPlan) {
-      return 'bg-gray-400 cursor-not-allowed'
-    }
-    
     if (userProfile?.subscription_plan === 'pro') {
-      return 'bg-purple-600 hover:bg-purple-700'
+      return 'bg-gradient-to-r from-purple-800 to-purple-700 hover:from-purple-900 hover:to-purple-800 text-white'
     } else if (userProfile?.subscription_plan === 'team') {
       if (selectedTeamSeats > currentTeamSeats) {
-        return 'bg-green-600 hover:bg-green-700'
+        return 'bg-purple-600 hover:bg-purple-700'
       } else if (selectedTeamSeats < currentTeamSeats) {
-        return 'bg-orange-600 hover:bg-orange-700'
+        return 'bg-purple-600 hover:bg-purple-700'
       } else {
-        return 'bg-gray-400 cursor-not-allowed'
+        return 'text-white cursor-not-allowed'
       }
     }
     return 'bg-purple-600 hover:bg-purple-700'
@@ -778,7 +784,7 @@ export default function SettingsPage() {
                 {userProfile?.stripe_customer_id && (
                   <div className="pt-6 border-t border-gray-200">
                     <div className="space-y-4">
-                      <h4 className="text-lg font-medium text-gray-900">Administrer Abonnement</h4>
+                      <h4 className="text-lg font-medium text-gray-900">Betalinger & Fakturaer</h4>
                       <p className="text-base text-gray-600">
                         Administrer dine betalingsoplysninger, se fakturaer, eller opsig dit abonnement.
                       </p>
@@ -827,114 +833,153 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Plan Management Section - Only for active Pro or Team users */}
-                {(userProfile?.subscription_status === 'active' && 
-                  (userProfile?.subscription_plan === 'pro' || userProfile?.subscription_plan === 'team')) && (
-                  <div className="pt-8 border-t border-gray-200">
-                    <h4 className="text-lg font-medium text-gray-900 mb-6">Administrer Abonnement</h4>
-                    <p className="text-base text-gray-600 mb-8">
-                      Skift mellem Pro og Team planer eller justér antal medarbejdere.
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Pro Plan Card */}
-                      <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl">
-                        <div className="flex items-center gap-3 mb-4">
-                          <Crown className="h-6 w-6 text-blue-600" />
-                          <h5 className="text-xl font-bold text-gray-900">Pro Plan</h5>
-                          {userProfile?.subscription_plan === 'pro' && (
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">Nuværende</Badge>
-                          )}
-                        </div>
-                        <div className="mb-4">
-                          <span className="text-3xl font-bold text-gray-900">299 kr</span>
-                          <span className="text-gray-600">/måned</span>
-                        </div>
-                        <ul className="space-y-2 mb-6 text-sm text-gray-700">
-                          <li>• Fuld adgang til platformen</li>
-                          <li>• Avanceret dashboard</li>
-                          <li>• Prioriteret support</li>
-                        </ul>
-                        {userProfile?.subscription_plan === 'team' && (
-                          <Button 
-                            onClick={handleDowngradeToProClick}
-                            disabled={creatingPortalSession}
-                            className="w-full bg-blue-600 hover:bg-blue-700"
-                          >
-                            {creatingPortalSession ? 'Behandler...' : 'Nedgradér til Pro'}
-                          </Button>
-                        )}
-                        {userProfile?.subscription_plan === 'pro' && (
-                          <div className="text-center text-sm text-gray-500 py-2">
-                            Din nuværende plan
-                          </div>
-                        )}
-                      </Card>
-
-                      {/* Team Plan Card */}
-                      <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl">
-                        <div className="flex items-center gap-3 mb-4">
-                          <Building2 className="h-6 w-6 text-purple-600" />
-                          <h5 className="text-xl font-bold text-gray-900">Team Plan</h5>
-                          {userProfile?.subscription_plan === 'team' && (
-                            <Badge className="bg-purple-100 text-purple-800 border-purple-200">Nuværende</Badge>
-                          )}
-                        </div>
-                        <div className="mb-4">
-                          <span className="text-3xl font-bold text-gray-900">{selectedTeamSeats * 199} kr</span>
-                          <span className="text-gray-600">/måned</span>
-                          <div className="text-sm text-gray-500 mt-1">
-                            199 kr per medarbejder
-                          </div>
-                        </div>
-                        
-                        {/* Team Seat Slider */}
-                        <div className="mb-6">
-                          <div className="flex items-center mb-2">
-                            <label className="text-sm font-medium text-gray-700">
-                              Antal medarbejdere:
-                            </label>
-                            <div className="ml-2 bg-purple-200 text-purple-900 px-3 py-1 rounded-full text-sm font-semibold">
-                              {selectedTeamSeats}
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <input
-                              type="range"
-                              min="3"
-                              max="50"
-                              value={selectedTeamSeats}
-                              onChange={(e) => setSelectedTeamSeats(parseInt(e.target.value))}
-                              className="w-full appearance-none cursor-pointer slider"
-                              style={{
-                                '--slider-progress': `${((selectedTeamSeats - 3) / (50 - 3)) * 100}%`
-                              } as React.CSSProperties & { '--slider-progress': string }}
-                            />
-                          </div>
-                        </div>
-
-                        <ul className="space-y-2 mb-6 text-sm text-gray-700">
-                          <li>• Alle Pro funktioner</li>
-                          <li>• Team medlemmer</li>
-                          <li>• Centraliseret content styring</li>
-                        </ul>
-                        
-                        <Button 
-                          onClick={handleTeamPlanClick}
-                          disabled={modifyingTeamPlan}
-                          className={`w-full ${getTeamButtonStyle()}`}
-                        >
-                          {modifyingTeamPlan ? 'Behandler...' : getTeamButtonText()}
-                        </Button>
-                      </Card>
-                    </div>
-                  </div>
-                )}
               </div>
             </Card>
+
+            {/* Plan Management Section - Only for active Pro or Team users */}
+            {(userProfile?.subscription_status === 'active' && 
+              (userProfile?.subscription_plan === 'pro' || userProfile?.subscription_plan === 'team')) && (
+              <div className="mt-8">
+                <h4 className="text-lg font-medium text-gray-900 mb-6">Justér Abonnement</h4>
+                <p className="text-base text-gray-600 mb-8">
+                  Skift mellem Pro og Team planer eller justér antal medarbejdere.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Pro Plan Card */}
+                  <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl flex flex-col">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Crown className="h-6 w-6 text-blue-600" />
+                      <h5 className="text-xl font-bold text-gray-900">Pro Plan</h5>
+                      {userProfile?.subscription_plan === 'pro' && (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">Nuværende</Badge>
+                      )}
+                    </div>
+                    <div className="mb-4">
+                      <span className="text-3xl font-bold text-gray-900">299 kr</span>
+                      <span className="text-gray-600">/måned</span>
+                    </div>
+                    <ul className="space-y-2 mb-6 text-sm text-gray-700 flex-grow">
+                      <li>• Fuld adgang til platformen</li>
+                      <li>• Avanceret dashboard</li>
+                      <li>• Prioriteret support</li>
+                    </ul>
+                    {userProfile?.subscription_plan === 'team' && (
+                      <Button 
+                        onClick={handleDowngradeToProClick}
+                        disabled={downgradingToPro || userProfile?.scheduled_downgrade_to === 'pro'}
+                        className={`w-full h-11 flex items-center justify-center font-medium ${
+                          userProfile?.scheduled_downgrade_to === 'pro'
+                            ? 'bg-blue-800 text-white cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        {downgradingToPro 
+                          ? 'Behandler...'
+                          : userProfile?.scheduled_downgrade_to === 'pro'
+                          ? `Nedgradéres ${userProfile.scheduled_downgrade_date ? new Date(userProfile.scheduled_downgrade_date).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' }) : ''}`
+                          : 'Nedgradér til Pro'
+                        }
+                      </Button>
+                    )}
+                    {userProfile?.subscription_plan === 'pro' && (
+                      <Button 
+                        className="w-full h-11 flex items-center justify-center font-medium text-white cursor-default"
+                        style={{ backgroundColor: '#ba74ea' }}
+                        disabled={true}
+                      >
+                        Din nuværende plan
+                      </Button>
+                    )}
+                  </Card>
+
+                  {/* Team Plan Card */}
+                  <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Building2 className="h-6 w-6 text-purple-600" />
+                      <h5 className="text-xl font-bold text-gray-900">Team Plan</h5>
+                      {userProfile?.subscription_plan === 'team' && (
+                        <Badge className="bg-purple-100 text-purple-800 border-purple-200">Nuværende</Badge>
+                      )}
+                    </div>
+                    <div className="mb-6">
+                      <span className="text-4xl font-bold text-gray-900">{selectedTeamSeats * 199} kr</span>
+                      <span className="text-gray-600">/måned</span>
+                      <div className="text-sm text-gray-500 mt-1">
+                        199 kr per medarbejder
+                      </div>
+                    </div>
+                    
+                    {/* Team Seat Slider */}
+                    <div className="mb-8">
+                      <div className="flex items-center mb-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          Antal medarbejdere:
+                        </label>
+                        <div className="ml-2 bg-purple-200 text-purple-900 px-3 py-1 rounded-full text-sm font-semibold">
+                          {selectedTeamSeats}
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="range"
+                          min="3"
+                          max="50"
+                          value={selectedTeamSeats}
+                          onChange={(e) => setSelectedTeamSeats(parseInt(e.target.value))}
+                          className="w-full appearance-none cursor-pointer slider"
+                          style={{
+                            '--slider-progress': `${((selectedTeamSeats - 3) / (50 - 3)) * 100}%`
+                          } as React.CSSProperties & { '--slider-progress': string }}
+                        />
+                      </div>
+                    </div>
+
+                    <ul className="space-y-4 mb-8">
+                      <li className="flex items-center">
+                        <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                          <Check className="w-4 h-4 text-white stroke-[3]" />
+                        </div>
+                        <span className="text-gray-700">Alle Pro funktioner</span>
+                      </li>
+                      <li className="flex items-center">
+                        <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                          <Check className="w-4 h-4 text-white stroke-[3]" />
+                        </div>
+                        <span className="text-gray-700">Team medlemmer</span>
+                      </li>
+                      <li className="flex items-center">
+                        <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                          <Check className="w-4 h-4 text-white stroke-[3]" />
+                        </div>
+                        <span className="text-gray-700">Centraliseret content styring</span>
+                      </li>
+                    </ul>
+                    
+                    <Button 
+                      onClick={handleTeamPlanClick}
+                      disabled={modifyingTeamPlan}
+                      className={`w-full h-11 flex items-center justify-center font-medium ${getTeamButtonStyle()}`}
+                      style={
+                        userProfile?.subscription_plan === 'team' && 
+                        selectedTeamSeats === currentTeamSeats && 
+                        !modifyingTeamPlan 
+                          ? { backgroundColor: '#ba74ea', backgroundImage: 'none' } 
+                          : {}
+                      }
+                    >
+                      {modifyingTeamPlan ? 'Behandler...' : getTeamButtonText()}
+                    </Button>
+                  </Card>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Extra bottom spacing */}
+      <div className="h-20"></div>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, targetPlan, upgradeType, quantity } = await request.json()
+    const { customerId, targetPlan, upgradeType, quantity, source } = await request.json()
 
     if (!customerId || !targetPlan || !upgradeType) {
       return NextResponse.json(
@@ -137,10 +137,24 @@ export async function POST(request: NextRequest) {
       
       const updatedSubscription = await stripe.subscriptions.update(subscription.id, updateData)
 
+      // Determine redirect URL based on source and change type
+      let redirectUrl = '/dashboard/settings?tab=subscription'
+      
+      if (source === 'homepage') {
+        // Always redirect to dashboard for homepage upgrades
+        redirectUrl = `/dashboard?upgraded=${targetPlan}`
+      } else if (source === 'settings') {
+        // For settings, only redirect if it's a real plan change, not just quantity
+        if (!isSamePlan) {
+          redirectUrl = `/dashboard?upgraded=${targetPlan}`
+        }
+        // For quantity-only changes, stay on settings page
+      }
+
       return NextResponse.json({
         success: true,
         subscription: updatedSubscription,
-        url: `/dashboard?upgraded=${targetPlan}`
+        url: redirectUrl
       })
     } else {
       // For downgrades, use subscription schedules to delay the change
@@ -205,11 +219,27 @@ export async function POST(request: NextRequest) {
         console.error('Database connection failed, webhook will handle it:', dbError)
       }
 
+      // Determine redirect URL for downgrades
+      let redirectUrl = `/dashboard/settings?tab=subscription`
+      
+      if (source === 'homepage') {
+        // Always redirect to dashboard for homepage downgrades  
+        redirectUrl = `/dashboard?downgraded=${targetPlan}&effective_date=${encodeURIComponent(userData.current_period_end)}&schedule_id=${updatedSchedule.id}`
+      } else if (source === 'settings') {
+        // For settings downgrades, only redirect for plan changes, not quantity changes
+        const currentPriceId = subscriptionItem.price.id
+        const isSamePlan = currentPriceId === newPriceId
+        if (!isSamePlan) {
+          redirectUrl = `/dashboard?downgraded=${targetPlan}&effective_date=${encodeURIComponent(userData.current_period_end)}&schedule_id=${updatedSchedule.id}`
+        }
+        // For quantity-only changes, stay on settings page
+      }
+
       // Always return success with URL params as fallback for immediate UI feedback
       return NextResponse.json({
         success: true,
         schedule: updatedSchedule,
-        url: `/dashboard?downgraded=${targetPlan}&effective_date=${encodeURIComponent(userData.current_period_end)}&schedule_id=${updatedSchedule.id}`
+        url: redirectUrl
       })
     }
   } catch (error: any) {

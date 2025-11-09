@@ -79,6 +79,13 @@ export default function HomePage() {
     getUser()
   }, [supabase])
 
+  // Update selectedSeats when userProfile changes for Team users
+  useEffect(() => {
+    if (userProfile?.subscription_plan === 'team' && userProfile?.team_members_count) {
+      setSelectedSeats(userProfile.team_members_count)
+    }
+  }, [userProfile])
+
   // Demo data
   const demoIdea = "Jeg har længe gået og overvejet noget lidt skørt: At købe en Tesla - men ikke bare for at have en smart bil. Jeg vil lave et eksperiment hvor jeg kun arbejder fra bilen, indtil den har tjent sig selv hjem. Hvad tror I - kan det lade sig gøre?"
 
@@ -439,24 +446,25 @@ export default function HomePage() {
     }
     if (!user) return 'Vælg Team'
     
-    // Existing users should manage subscriptions in settings
+    // Team users should manage subscriptions in settings
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'team') {
       return 'Dit nuværende plan'
     }
     
+    // Pro users can upgrade to Team
     if (userProfile?.subscription_status === 'active' && userProfile?.subscription_plan === 'pro') {
-      return 'Administrér i indstillinger'
+      return 'Opgradér til Team'
     }
     
     return 'Vælg Team'
   }
 
   const isTeamButtonDisabled = (): boolean => {
-    // Disable Team button for all existing active users
-    const hasActiveSubscription = Boolean(user !== null && userProfile?.subscription_status === 'active' && 
-      (userProfile?.subscription_plan === 'team' || userProfile?.subscription_plan === 'pro'))
+    // Only disable for existing Team users (they should manage in settings)
+    const hasTeamSubscription = Boolean(user !== null && userProfile?.subscription_status === 'active' && 
+      userProfile?.subscription_plan === 'team')
     
-    return loading || creatingTeamCheckout || hasActiveSubscription
+    return loading || creatingTeamCheckout || hasTeamSubscription
   }
 
   const handleFreeTrialClick = async () => {
