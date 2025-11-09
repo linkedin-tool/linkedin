@@ -305,6 +305,9 @@ export type Database = {
           id: string
           linkedin_member_id: string
           person_urn: string
+          profile_email: string | null
+          profile_name: string | null
+          profile_picture_url: string | null
           refresh_token: string | null
           refresh_token_expires_at: string | null
           scope: string
@@ -318,6 +321,9 @@ export type Database = {
           id?: string
           linkedin_member_id: string
           person_urn: string
+          profile_email?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
           refresh_token?: string | null
           refresh_token_expires_at?: string | null
           scope: string
@@ -331,6 +337,9 @@ export type Database = {
           id?: string
           linkedin_member_id?: string
           person_urn?: string
+          profile_email?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
           refresh_token?: string | null
           refresh_token_expires_at?: string | null
           scope?: string

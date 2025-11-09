@@ -35,7 +35,7 @@ interface LinkedInProfile {
   profile_name: string | null
   profile_picture_url: string | null
   profile_email: string | null
-  created_at: string
+  created_at: string | null
   access_token_expires_at: string
 }
 
@@ -106,7 +106,7 @@ export default function SettingsPage() {
         .maybeSingle()
 
       if (linkedInData) {
-        setLinkedInProfile(linkedInData as LinkedInProfile)
+        setLinkedInProfile(linkedInData)
       }
 
       setLoading(false)
@@ -628,12 +628,14 @@ export default function SettingsPage() {
                   
                   {/* Connection Info */}
                   <div className="space-y-3 pt-4 border-t border-gray-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-700">Forbundet siden</span>
-                      <span className="text-base text-gray-900">
-                        {new Date(linkedInProfile.created_at).toLocaleDateString('da-DK')}
-                      </span>
-                    </div>
+                    {linkedInProfile.created_at && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-base font-medium text-gray-700">Forbundet siden</span>
+                        <span className="text-base text-gray-900">
+                          {new Date(linkedInProfile.created_at).toLocaleDateString('da-DK')}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-base font-medium text-gray-700">Adgang udløber</span>
                       <span className="text-base text-gray-900">
