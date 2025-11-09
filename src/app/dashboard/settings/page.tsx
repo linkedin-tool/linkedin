@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ExternalLink, Crown, Calendar, CreditCard, Building2, Check } from 'lucide-react'
+import { ExternalLink, Crown, Calendar, CreditCard, Building2, Check, Linkedin } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -30,9 +30,19 @@ interface UserProfile {
   team_members_count?: number | null
 }
 
+interface LinkedInProfile {
+  id: string
+  profile_name: string | null
+  profile_picture_url: string | null
+  profile_email: string | null
+  created_at: string
+  access_token_expires_at: string
+}
+
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null)
   const [activeTab, setActiveTab] = useState('profile')
   const [formData, setFormData] = useState({
     name: '',
@@ -88,6 +98,17 @@ export default function SettingsPage() {
         }
       }
 
+      // Fetch LinkedIn profile
+      const { data: linkedInData } = await supabase
+        .from('linkedin_profiles')
+        .select('id, profile_name, profile_picture_url, profile_email, created_at, access_token_expires_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (linkedInData) {
+        setLinkedInProfile(linkedInData as LinkedInProfile)
+      }
+
       setLoading(false)
     }
 
@@ -138,6 +159,7 @@ export default function SettingsPage() {
   const handleStripePortal = async () => {
     if (!userProfile?.stripe_customer_id) {
       setMessage('Ingen Stripe kunde ID fundet')
+      setTimeout(() => setMessage(''), 3000)
       return
     }
 
@@ -156,17 +178,18 @@ export default function SettingsPage() {
       const data = await response.json()
       
       if (response.ok) {
-        // Redirect to Stripe Customer Portal
+        // Redirect to Stripe Customer Portal - keep loading state until redirect
         window.location.href = data.url
       } else {
         setMessage('Fejl ved oprettelse af portal session: ' + data.error)
+        setTimeout(() => setMessage(''), 3000)
+        setCreatingPortalSession(false)
       }
     } catch (error) {
       console.error('Portal session error:', error)
       setMessage('Der skete en fejl ved adgang til Stripe portal')
-    } finally {
-      setCreatingPortalSession(false)
       setTimeout(() => setMessage(''), 3000)
+      setCreatingPortalSession(false)
     }
   }
 
@@ -568,6 +591,69 @@ export default function SettingsPage() {
                 </div>
               </div>
             </Card>
+
+            {/* LinkedIn Profile Card */}
+            {linkedInProfile && (
+              <Card className="p-8 bg-white border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <Linkedin className="h-6 w-6 text-[#0A66C2]" />
+                  <h3 className="text-xl font-semibold text-gray-900">LinkedIn Profil</h3>
+                </div>
+                <div className="space-y-6">
+                  {/* Profile Picture and Name */}
+                  {(linkedInProfile.profile_picture_url || linkedInProfile.profile_name) && (
+                    <div className="flex items-center gap-4">
+                      {linkedInProfile.profile_picture_url && (
+                        <div className="relative">
+                          <img 
+                            src={linkedInProfile.profile_picture_url} 
+                            alt={linkedInProfile.profile_name || 'LinkedIn profil'}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                          />
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0A66C2] rounded-full flex items-center justify-center border-2 border-white">
+                            <Linkedin className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        {linkedInProfile.profile_name && (
+                          <p className="text-lg font-semibold text-gray-900">{linkedInProfile.profile_name}</p>
+                        )}
+                        {linkedInProfile.profile_email && (
+                          <p className="text-sm text-gray-600">{linkedInProfile.profile_email}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Connection Info */}
+                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-base font-medium text-gray-700">Forbundet siden</span>
+                      <span className="text-base text-gray-900">
+                        {new Date(linkedInProfile.created_at).toLocaleDateString('da-DK')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-base font-medium text-gray-700">Adgang udløber</span>
+                      <span className="text-base text-gray-900">
+                        {new Date(linkedInProfile.access_token_expires_at).toLocaleDateString('da-DK')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Link to Integration Page */}
+                  <div className="pt-4">
+                    <Button asChild variant="outline" className="w-full">
+                      <a href="/dashboard/integration" className="flex items-center justify-center gap-2">
+                        <Linkedin className="w-4 h-4" />
+                        Administrer LinkedIn forbindelse
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
@@ -791,10 +877,10 @@ export default function SettingsPage() {
                       <Button 
                         onClick={handleStripePortal}
                         disabled={creatingPortalSession}
-                        className="flex items-center gap-2 px-8 h-11 bg-blue-600 hover:bg-blue-700"
+                        className="flex items-center gap-2 px-8 h-11 bg-blue-600 hover:bg-blue-700 disabled:opacity-100 disabled:cursor-wait"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        {creatingPortalSession ? 'Opretter...' : 'Åbn Stripe Portal'}
+                        {creatingPortalSession ? 'Vent venligst...' : 'Åbn Stripe Portal'}
                       </Button>
                     </div>
                   </div>

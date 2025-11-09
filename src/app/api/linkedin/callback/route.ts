@@ -30,7 +30,14 @@ async function fetchUserInfo(accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   if (!res.ok) throw new Error(`userinfo failed: ${res.status} ${await res.text()}`);
-  return res.json() as Promise<{ sub: string } & Record<string, unknown>>;
+  return res.json() as Promise<{ 
+    sub: string;
+    name?: string;
+    given_name?: string;
+    family_name?: string;
+    picture?: string;
+    email?: string;
+  }>;
 }
 
 export async function GET(req: NextRequest) {
@@ -67,6 +74,11 @@ export async function GET(req: NextRequest) {
     const uinfo = await fetchUserInfo(accessToken); // OIDC userinfo
     const memberId = uinfo.sub;                      // LinkedIn member id
     const personUrn = `urn:li:person:${memberId}`;
+    
+    // Extract profile information from userinfo
+    const profileName = uinfo.name || `${uinfo.given_name || ''} ${uinfo.family_name || ''}`.trim() || null;
+    const profilePicture = uinfo.picture || null;
+    const profileEmail = uinfo.email || null;
 
     console.log("Getting Supabase user...");
     const supabase = await createClient();
@@ -87,6 +99,9 @@ export async function GET(req: NextRequest) {
         access_token_expires_at: accessTokenExpiresAt.toISOString(),
         refresh_token: refreshToken,
         refresh_token_expires_at: refreshTokenExpiresAt?.toISOString() ?? null,
+        profile_name: profileName,
+        profile_picture_url: profilePicture,
+        profile_email: profileEmail,
         created_at: now,  // Opdater created_at til fornyelsesdato
         updated_at: now
       }, { onConflict: "user_id" });
