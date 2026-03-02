@@ -114,6 +114,12 @@ export default function NyIdePage() {
         body: formData,
       });
 
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Transcribe API fejl:', response.status, text);
+        throw new Error(`Server fejl ${response.status}`);
+      }
+
       const result = await response.json();
 
       if (result.success) {
